@@ -1,0 +1,6 @@
+@SafeDeal.API_HostAddress = http://localhost:5228
+
+GET {{SafeDeal.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
