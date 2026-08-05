@@ -12,6 +12,7 @@ using SafeDeal.Infrastructure.Services.Email;
 using SafeDeal.Infrastructure.Services.Identity;
 using SafeDeal.Infrastructure.Services.Payment;
 using StackExchange.Redis;
+using SafeDeal.Infrastructure.Services.Storage;
 
 namespace SafeDeal.Infrastructure;
 
@@ -45,7 +46,7 @@ public static class DependencyInjection
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IPaymentService, StripeService>();
         services.AddHttpClient<IIdentityVerificationService, SumsubService>();
-
+        services.AddScoped<IFileStorageService, LocalFileStorageService>();
         return services;
     }
 }
