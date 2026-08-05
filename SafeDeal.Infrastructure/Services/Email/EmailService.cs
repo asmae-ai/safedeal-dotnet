@@ -16,8 +16,8 @@ public class EmailService : IEmailService
             $"Hi {name},\n\nYour verification code is: {code}\n\nExpires in 10 minutes.", ct);
 
     public async Task SendPasswordResetAsync(string email, string name, string token, CancellationToken ct = default)
-        => await SendAsync(email, "SafeDeal — Reset your password",
-            $"Hi {name},\n\nYour password reset token is: {token}\n\nExpires in 10 minutes.", ct);
+    => await SendAsync(email, "SafeDeal — Reset your password",
+        $"Hi {name},\n\nClick the link below to reset your password :\n\nhttp://localhost:5173/reset-password?token={token}&email={email}\n\nThis link expires in 10 minutes.\n\nIf you didn't request this, ignore this email.", ct);
 
     public async Task SendOtpAsync(string email, string name, string code, CancellationToken ct = default)
         => await SendAsync(email, "SafeDeal — Your OTP code",
