@@ -12,7 +12,7 @@ public class Transaction : BaseEntity, IAuditableEntity
     public TransactionStatus Status { get; private set; } = TransactionStatus.PendingPayment;
     public string SecureToken { get; private set; } = string.Empty;
     public int VendorId { get; private set; }
-    public int? BuyerId { get; private set; }
+    public int? BuyerId { get; internal set; }
     public string? TrackingNumber { get; private set; }
     public string? Carrier { get; private set; }
     public string? StripeSessionId { get; private set; }
@@ -53,10 +53,9 @@ public class Transaction : BaseEntity, IAuditableEntity
 
     public void Claim(int buyerId)
     {
-        // Remplace ligne 56
-if (BuyerId is not null) throw new BusinessRuleException("Transaction already claimed.");
-// Remplace ligne 57
-if (buyerId == VendorId) throw new BusinessRuleException("Vendor cannot claim their own transaction.");
+        if (BuyerId is not null) throw new BusinessRuleException("Transaction already claimed.");
+        if (buyerId == VendorId) throw new BusinessRuleException("Vendor cannot claim their own transaction.");
+        BuyerId = buyerId;
         UpdateTimestamp();
     }
 

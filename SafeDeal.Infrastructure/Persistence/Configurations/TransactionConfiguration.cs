@@ -15,7 +15,7 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
         builder.Property(t => t.Status).HasConversion<string>();
         builder.Property(t => t.TrackingNumber).HasMaxLength(100);
         builder.Property(t => t.Carrier).HasMaxLength(100);
-
+        builder.Property(t => t.BuyerId).HasColumnName("BuyerId");
         builder.OwnsOne(t => t.Amount, money =>
         {
             money.Property(m => m.Amount).HasColumnName("Amount").HasPrecision(10, 2);
