@@ -18,4 +18,6 @@ public record AdminVerificationDto(
     string UserEmail,
     string DocumentType,
     string Status,
-    string SubmittedAt);
+    string SubmittedAt,
+    string DocumentFrontPath,
+    string SelfiePath);

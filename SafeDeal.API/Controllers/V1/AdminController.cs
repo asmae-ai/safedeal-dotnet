@@ -79,6 +79,28 @@ public class AdminController : ControllerBase
         await _mediator.Send(new ResolveDisputeCommand(id, request.Decision, request.Note), ct);
         return Ok(new { message = "Dispute resolved." });
     }
+
+    [HttpGet("identities/{id:int}/document/front")]
+    public async Task<IActionResult> GetDocumentFront(int id, CancellationToken ct)
+    {
+        var verifications = await _mediator.Send(new GetPendingVerificationsQuery(), ct);
+        var doc = verifications.FirstOrDefault(v => v.Id == id);
+        if (doc is null) return NotFound();
+        if (!System.IO.File.Exists(doc.DocumentFrontPath)) return NotFound();
+        var bytes = await System.IO.File.ReadAllBytesAsync(doc.DocumentFrontPath, ct);
+        return File(bytes, "image/jpeg");
+    }
+
+    [HttpGet("identities/{id:int}/document/selfie")]
+    public async Task<IActionResult> GetSelfie(int id, CancellationToken ct)
+    {
+        var verifications = await _mediator.Send(new GetPendingVerificationsQuery(), ct);
+        var doc = verifications.FirstOrDefault(v => v.Id == id);
+        if (doc is null) return NotFound();
+        if (!System.IO.File.Exists(doc.SelfiePath)) return NotFound();
+        var bytes = await System.IO.File.ReadAllBytesAsync(doc.SelfiePath, ct);
+        return File(bytes, "image/jpeg");
+    }
 }
 
 public record RejectIdentityRequest(string Reason);

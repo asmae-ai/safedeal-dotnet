@@ -24,7 +24,9 @@ public class GetPendingVerificationsQueryHandler : IRequestHandler<GetPendingVer
                 v.User.Email,
                 v.DocumentType,
                 v.Status.ToString().ToLower(),
-                v.CreatedAt.ToString("o")))
+                v.CreatedAt.ToString("o"),
+                v.DocumentFrontPath,
+                v.SelfiePath))
             .ToListAsync(ct);
     }
 }

@@ -26,25 +26,32 @@ public class WebhooksController : ControllerBase
     {
         var payload = await new StreamReader(Request.Body).ReadToEndAsync(ct);
         var signature = Request.Headers["Stripe-Signature"].ToString();
+        var secret = _config["Stripe:WebhookSecret"]!;
 
-        var isValid = await _paymentService.ValidateWebhookAsync(payload, signature, ct);
-        if (!isValid) return BadRequest(new { message = "Invalid webhook signature." });
-
-        var stripeEvent = EventUtility.ParseEvent(payload);
+        Event stripeEvent;
+        try
+        {
+            stripeEvent = EventUtility.ConstructEvent(payload, signature, secret);
+        }
+        catch (StripeException)
+        {
+            return BadRequest(new { message = "Invalid webhook signature." });
+        }
 
         if (stripeEvent.Type == EventTypes.CheckoutSessionCompleted)
         {
             var session = stripeEvent.Data.Object as Stripe.Checkout.Session;
-            if (session?.Metadata.TryGetValue("transaction_id", out var transactionId) == true)
+            if (session?.Metadata != null &&
+                session.Metadata.TryGetValue("transaction_id", out var transactionId))
             {
                 await _mediator.Send(new PayTransactionCommand(
                     int.Parse(transactionId),
                     session.Id,
-                    session.PaymentIntentId), ct);
+                    session.PaymentIntentId ?? ""), ct);
             }
         }
 
-        return Ok();
+        return Ok(new { message = "Webhook handled." });
     }
 
     [HttpPost("sumsub")]
