@@ -16,5 +16,15 @@ public class DisputeConfiguration : IEntityTypeConfiguration<Dispute>
             .HasConversion(
                 v => string.Join(',', v),
                 v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList());
+
+        builder.HasOne(d => d.OpenedBy)
+            .WithMany()
+            .HasForeignKey(d => d.OpenedByUserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasOne(d => d.Transaction)
+            .WithOne(t => t.Dispute)
+            .HasForeignKey<Dispute>(d => d.TransactionId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
