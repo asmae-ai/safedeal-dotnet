@@ -45,6 +45,7 @@ public class TransactionRepository : ITransactionRepository
     public async Task UpdateAsync(Transaction transaction, CancellationToken ct = default)
     {
         _context.Transactions.Update(transaction);
+        _context.Entry(transaction).Property("BuyerId").IsModified = true;
         await _context.SaveChangesAsync(ct);
     }
 }

@@ -9,6 +9,7 @@ using SafeDeal.Application.Admin.Queries.GetAllUsers;
 using SafeDeal.Application.Admin.Queries.GetPendingVerifications;
 using SafeDeal.Application.Admin.Queries.GetStatistics;
 using SafeDeal.Application.Disputes.Commands.ResolveDispute;
+using SafeDeal.Domain.Interfaces.Repositories;
 
 namespace SafeDeal.API.Controllers.V1;
 
@@ -18,7 +19,18 @@ namespace SafeDeal.API.Controllers.V1;
 public class AdminController : ControllerBase
 {
     private readonly IMediator _mediator;
-    public AdminController(IMediator mediator) => _mediator = mediator;
+    private readonly IIdentityVerificationRepository _verifications;
+    private readonly IWebHostEnvironment _env;
+
+    public AdminController(
+        IMediator mediator,
+        IIdentityVerificationRepository verifications,
+        IWebHostEnvironment env)
+    {
+        _mediator = mediator;
+        _verifications = verifications;
+        _env = env;
+    }
 
     [HttpGet("stats")]
     public async Task<IActionResult> GetStats(CancellationToken ct)
@@ -83,23 +95,43 @@ public class AdminController : ControllerBase
     [HttpGet("identities/{id:int}/document/front")]
     public async Task<IActionResult> GetDocumentFront(int id, CancellationToken ct)
     {
-        var verifications = await _mediator.Send(new GetPendingVerificationsQuery(), ct);
-        var doc = verifications.FirstOrDefault(v => v.Id == id);
-        if (doc is null) return NotFound();
-        if (!System.IO.File.Exists(doc.DocumentFrontPath)) return NotFound();
-        var bytes = await System.IO.File.ReadAllBytesAsync(doc.DocumentFrontPath, ct);
-        return File(bytes, "image/jpeg");
+        var verification = await _verifications.GetByIdAsync(id, ct);
+        if (verification is null)
+            return NotFound(new { message = "Verification not found." });
+
+        var fullPath = Path.Combine(_env.ContentRootPath, verification.DocumentFrontPath);
+        if (!System.IO.File.Exists(fullPath))
+            return NotFound(new { message = "Document file not found on disk." });
+
+        var bytes = await System.IO.File.ReadAllBytesAsync(fullPath, ct);
+        return File(bytes, GetContentType(fullPath));
     }
 
     [HttpGet("identities/{id:int}/document/selfie")]
     public async Task<IActionResult> GetSelfie(int id, CancellationToken ct)
     {
-        var verifications = await _mediator.Send(new GetPendingVerificationsQuery(), ct);
-        var doc = verifications.FirstOrDefault(v => v.Id == id);
-        if (doc is null) return NotFound();
-        if (!System.IO.File.Exists(doc.SelfiePath)) return NotFound();
-        var bytes = await System.IO.File.ReadAllBytesAsync(doc.SelfiePath, ct);
-        return File(bytes, "image/jpeg");
+        var verification = await _verifications.GetByIdAsync(id, ct);
+        if (verification is null)
+            return NotFound(new { message = "Verification not found." });
+
+        var fullPath = Path.Combine(_env.ContentRootPath, verification.SelfiePath);
+        if (!System.IO.File.Exists(fullPath))
+            return NotFound(new { message = "Selfie file not found on disk." });
+
+        var bytes = await System.IO.File.ReadAllBytesAsync(fullPath, ct);
+        return File(bytes, GetContentType(fullPath));
+    }
+
+    private static string GetContentType(string path)
+    {
+        var ext = Path.GetExtension(path).ToLowerInvariant();
+        return ext switch
+        {
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".pdf" => "application/pdf",
+            _ => "application/octet-stream"
+        };
     }
 }
 

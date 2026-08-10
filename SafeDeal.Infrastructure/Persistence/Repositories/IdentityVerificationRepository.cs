@@ -13,6 +13,10 @@ public class IdentityVerificationRepository : IIdentityVerificationRepository
         => await _context.IdentityVerifications
             .FirstOrDefaultAsync(v => v.UserId == userId, ct);
 
+    public async Task<IdentityVerification?> GetByIdAsync(int id, CancellationToken ct = default)
+        => await _context.IdentityVerifications
+            .FirstOrDefaultAsync(v => v.Id == id, ct);
+
     public async Task AddAsync(IdentityVerification verification, CancellationToken ct = default)
     {
         await _context.IdentityVerifications.AddAsync(verification, ct);
