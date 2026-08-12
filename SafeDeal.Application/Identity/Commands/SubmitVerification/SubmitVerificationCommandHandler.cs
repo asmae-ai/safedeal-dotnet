@@ -44,11 +44,10 @@ public class SubmitVerificationCommandHandler : IRequestHandler<SubmitVerificati
         {
             applicantId = await _sumsub.CreateApplicantAsync(request.UserId, user.Email, ct);
         }
-        catch
+        catch (Exception ex)
         {
-            // Si Sumsub échoue, on continue quand même avec le KYC maison
+            Console.WriteLine($"=== SUMSUB ERROR: {ex.Message} ===");
         }
-
         var verification = IdentityVerification.Create(
             request.UserId,
             request.DocumentType,

@@ -23,7 +23,7 @@ public class SumsubService : IIdentityVerificationService
 
     public async Task<string> CreateApplicantAsync(int userId, string email, CancellationToken ct = default)
     {
-        var path = "/resources/applicants?levelName=basic-kyc-level";
+        var path = "/resources/applicants?levelName=id-and-liveness";
         var body = new
         {
             externalUserId = userId.ToString(),
