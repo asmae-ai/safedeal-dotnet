@@ -3,6 +3,7 @@ using SafeDeal.Application.Common.Exceptions;
 using SafeDeal.Domain.Entities;
 using SafeDeal.Domain.Enums;
 using SafeDeal.Domain.Interfaces.Repositories;
+using SafeDeal.Domain.Interfaces.Services;
 
 namespace SafeDeal.Application.Identity.Commands.SubmitVerification;
 
@@ -10,11 +11,16 @@ public class SubmitVerificationCommandHandler : IRequestHandler<SubmitVerificati
 {
     private readonly IIdentityVerificationRepository _verifications;
     private readonly IUserRepository _users;
+    private readonly IIdentityVerificationService _sumsub;
 
-    public SubmitVerificationCommandHandler(IIdentityVerificationRepository verifications, IUserRepository users)
+    public SubmitVerificationCommandHandler(
+        IIdentityVerificationRepository verifications,
+        IUserRepository users,
+        IIdentityVerificationService sumsub)
     {
         _verifications = verifications;
         _users = users;
+        _sumsub = sumsub;
     }
 
     public async Task Handle(SubmitVerificationCommand request, CancellationToken ct)
@@ -32,11 +38,25 @@ public class SubmitVerificationCommandHandler : IRequestHandler<SubmitVerificati
                 ["verification"] = ["A verification is already pending."]
             });
 
+        // Créer un applicant Sumsub
+        string? applicantId = null;
+        try
+        {
+            applicantId = await _sumsub.CreateApplicantAsync(request.UserId, user.Email, ct);
+        }
+        catch
+        {
+            // Si Sumsub échoue, on continue quand même avec le KYC maison
+        }
+
         var verification = IdentityVerification.Create(
             request.UserId,
             request.DocumentType,
             request.DocumentFrontPath,
             request.SelfiePath);
+
+        if (applicantId is not null)
+            verification.SetSumsubApplicantId(applicantId);
 
         await _verifications.AddAsync(verification, ct);
     }
