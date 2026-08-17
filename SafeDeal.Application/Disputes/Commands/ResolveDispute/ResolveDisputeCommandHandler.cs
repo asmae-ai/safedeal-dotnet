@@ -18,11 +18,11 @@ public class ResolveDisputeCommandHandler : IRequestHandler<ResolveDisputeComman
 
     public async Task Handle(ResolveDisputeCommand request, CancellationToken ct)
     {
-        var transaction = await _transactions.GetByIdAsync(request.TransactionId, ct)
-            ?? throw new NotFoundException("Transaction", request.TransactionId);
+        var dispute = await _disputes.GetByIdAsync(request.DisputeId, ct)
+            ?? throw new NotFoundException("Dispute", request.DisputeId);
 
-        var dispute = await _disputes.GetByTransactionIdAsync(request.TransactionId, ct)
-            ?? throw new NotFoundException("Dispute", request.TransactionId);
+        var transaction = await _transactions.GetByIdAsync(dispute.TransactionId, ct)
+            ?? throw new NotFoundException("Transaction", dispute.TransactionId);
 
         var newStatus = request.Decision switch
         {

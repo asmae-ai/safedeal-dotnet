@@ -5,5 +5,4 @@ namespace SafeDeal.Application.Auth.Commands.ChangePassword;
 public record ChangePasswordCommand(
     int UserId,
     string CurrentPassword,
-    string Password,
-    string PasswordConfirmation) : IRequest;
+    string NewPassword) : IRequest;

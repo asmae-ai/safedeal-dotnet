@@ -1,3 +1,4 @@
+using BC = BCrypt.Net.BCrypt;
 using SafeDeal.Domain.Common;
 using SafeDeal.Domain.Enums;
 
@@ -9,6 +10,7 @@ public class User : BaseEntity, IAuditableEntity
     public string Email { get; private set; } = string.Empty;
     public string PasswordHash { get; private set; } = string.Empty;
     public string? Phone { get; private set; }
+    public string? AvatarPath { get; private set; }
     public UserRole Role { get; private set; }
     public bool IsEmailVerified { get; private set; }
     public IdentityStatus IdentityStatus { get; private set; } = IdentityStatus.NotSubmitted;
@@ -35,24 +37,55 @@ public class User : BaseEntity, IAuditableEntity
     }
 
     public void VerifyEmail() => IsEmailVerified = true;
+
     public void UpdateIdentityStatus(IdentityStatus status)
     {
         IdentityStatus = status;
         UpdateTimestamp();
     }
+
     public void UpdatePhone(string phone)
     {
         Phone = phone.Trim();
         UpdateTimestamp();
     }
+
     public void UpdatePasswordHash(string hash)
     {
         PasswordHash = hash;
         UpdateTimestamp();
     }
+
     public void Deactivate()
     {
         IsActive = false;
+        UpdateTimestamp();
+    }
+
+    public void UpdateProfile(string? name, string? phone)
+    {
+        if (!string.IsNullOrWhiteSpace(name))
+            Name = name.Trim();
+        if (!string.IsNullOrWhiteSpace(phone))
+            Phone = phone.Trim();
+        UpdateTimestamp();
+    }
+
+    public void UpdateAvatar(string path)
+    {
+        AvatarPath = path;
+        UpdateTimestamp();
+    }
+
+    public bool VerifyPassword(string password)
+    {
+        return BC.Verify(password, PasswordHash);
+    }
+
+    public void ChangePassword(string newPassword)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(newPassword);
+        PasswordHash = BC.HashPassword(newPassword);
         UpdateTimestamp();
     }
 }

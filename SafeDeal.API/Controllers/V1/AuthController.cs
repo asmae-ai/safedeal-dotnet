@@ -9,10 +9,10 @@ using SafeDeal.Application.Auth.Commands.Logout;
 using SafeDeal.Application.Auth.Commands.Register;
 using SafeDeal.Application.Auth.Commands.ResendVerification;
 using SafeDeal.Application.Auth.Commands.SendTwoFactor;
+using SafeDeal.Application.Auth.Commands.UpdateProfile;
 using SafeDeal.Application.Auth.Commands.VerifyEmail;
 using SafeDeal.Application.Auth.Commands.VerifyTwoFactor;
 using SafeDeal.Application.Auth.Commands.ResetPassword;
-
 using SafeDeal.Application.Auth.Queries.GetCurrentUser;
 using System.Security.Claims;
 
@@ -58,6 +58,22 @@ public class AuthController : ControllerBase
     {
         var result = await _mediator.Send(new GetCurrentUserQuery(UserId), ct);
         return Ok(new { user = result });
+    }
+
+    [HttpPatch("me")]
+    [Authorize]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request, CancellationToken ct)
+    {
+        await _mediator.Send(new UpdateProfileCommand(UserId, request.Name, request.Phone), ct);
+        return Ok(new { message = "Profile updated successfully." });
+    }
+
+    [HttpPost("me/change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken ct)
+    {
+        await _mediator.Send(new ChangePasswordCommand(UserId, request.CurrentPassword, request.NewPassword), ct);
+        return Ok(new { message = "Password changed successfully." });
     }
 
     [HttpPost("auth/email/verify")]
@@ -106,16 +122,9 @@ public class AuthController : ControllerBase
         await _mediator.Send(command, ct);
         return Ok(new { message = "Password reset successfully." });
     }
-
-    [HttpPatch("me")]
-    [Authorize]
-    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken ct)
-    {
-        await _mediator.Send(new ChangePasswordCommand(UserId, request.CurrentPassword, request.Password, request.PasswordConfirmation), ct);
-        return Ok(new { message = "Password changed successfully." });
-    }
 }
 
 public record VerifyEmailRequest(string Code);
 public record VerifyOtpRequest(string Code);
-public record ChangePasswordRequest(string CurrentPassword, string Password, string PasswordConfirmation);
+public record UpdateProfileRequest(string? Name, string? Phone);
+public record ChangePasswordRequest(string CurrentPassword, string NewPassword);

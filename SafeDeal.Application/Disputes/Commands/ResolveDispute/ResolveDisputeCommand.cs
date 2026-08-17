@@ -3,6 +3,6 @@ using MediatR;
 namespace SafeDeal.Application.Disputes.Commands.ResolveDispute;
 
 public record ResolveDisputeCommand(
-    int TransactionId,
+    int DisputeId,
     string Decision,
     string Note) : IRequest;

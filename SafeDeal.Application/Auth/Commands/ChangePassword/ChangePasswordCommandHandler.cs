@@ -7,20 +7,25 @@ namespace SafeDeal.Application.Auth.Commands.ChangePassword;
 public class ChangePasswordCommandHandler : IRequestHandler<ChangePasswordCommand>
 {
     private readonly IUserRepository _users;
-    public ChangePasswordCommandHandler(IUserRepository users) => _users = users;
+
+    public ChangePasswordCommandHandler(IUserRepository users)
+    {
+        _users = users;
+    }
 
     public async Task Handle(ChangePasswordCommand request, CancellationToken ct)
     {
         var user = await _users.GetByIdAsync(request.UserId, ct)
             ?? throw new NotFoundException("User", request.UserId);
 
-        if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+        if (!user.VerifyPassword(request.CurrentPassword))
             throw new ValidationException(new Dictionary<string, string[]>
             {
-                ["current_password"] = ["Current password is incorrect."]
+                ["currentPassword"] = ["Current password is incorrect."]
             });
 
-        user.UpdatePasswordHash(BCrypt.Net.BCrypt.HashPassword(request.Password));
+        user.ChangePassword(request.NewPassword);
+
         await _users.UpdateAsync(user, ct);
     }
 }

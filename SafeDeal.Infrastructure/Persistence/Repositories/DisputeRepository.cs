@@ -9,6 +9,11 @@ public class DisputeRepository : IDisputeRepository
     private readonly AppDbContext _context;
     public DisputeRepository(AppDbContext context) => _context = context;
 
+    public async Task<Dispute?> GetByIdAsync(int id, CancellationToken ct = default)
+        => await _context.Disputes
+            .Include(d => d.OpenedBy)
+            .FirstOrDefaultAsync(d => d.Id == id, ct);
+
     public async Task<Dispute?> GetByTransactionIdAsync(int transactionId, CancellationToken ct = default)
         => await _context.Disputes
             .Include(d => d.OpenedBy)
