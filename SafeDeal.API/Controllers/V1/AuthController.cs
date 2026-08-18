@@ -10,6 +10,7 @@ using SafeDeal.Application.Auth.Commands.Register;
 using SafeDeal.Application.Auth.Commands.ResendVerification;
 using SafeDeal.Application.Auth.Commands.SendTwoFactor;
 using SafeDeal.Application.Auth.Commands.UpdateProfile;
+using SafeDeal.Application.Auth.Commands.UploadAvatar;
 using SafeDeal.Application.Auth.Commands.VerifyEmail;
 using SafeDeal.Application.Auth.Commands.VerifyTwoFactor;
 using SafeDeal.Application.Auth.Commands.ResetPassword;
@@ -23,7 +24,13 @@ namespace SafeDeal.API.Controllers.V1;
 public class AuthController : ControllerBase
 {
     private readonly IMediator _mediator;
-    public AuthController(IMediator mediator) => _mediator = mediator;
+    private readonly IWebHostEnvironment _env;
+
+    public AuthController(IMediator mediator, IWebHostEnvironment env)
+    {
+        _mediator = mediator;
+        _env = env;
+    }
 
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
     private string Token => Request.Headers.Authorization.ToString().Replace("Bearer ", "");
@@ -74,6 +81,15 @@ public class AuthController : ControllerBase
     {
         await _mediator.Send(new ChangePasswordCommand(UserId, request.CurrentPassword, request.NewPassword), ct);
         return Ok(new { message = "Password changed successfully." });
+    }
+
+    [HttpPost("me/avatar")]
+    [Authorize]
+    public async Task<IActionResult> UploadAvatar(IFormFile file, CancellationToken ct)
+    {
+        var uploadPath = Path.Combine(_env.ContentRootPath, "uploads");
+        var path = await _mediator.Send(new UploadAvatarCommand(UserId, file, uploadPath), ct);
+        return Ok(new { message = "Avatar uploaded successfully.", path });
     }
 
     [HttpPost("auth/email/verify")]

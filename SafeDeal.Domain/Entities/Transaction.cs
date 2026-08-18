@@ -27,7 +27,7 @@ public class Transaction : BaseEntity, IAuditableEntity
     {
         [TransactionStatus.PendingPayment] = [TransactionStatus.PaymentReceived, TransactionStatus.Cancelled],
         [TransactionStatus.PaymentReceived] = [TransactionStatus.InShipping, TransactionStatus.Cancelled],
-        [TransactionStatus.InShipping] = [TransactionStatus.Delivered],
+        [TransactionStatus.InShipping] = [TransactionStatus.Delivered, TransactionStatus.Cancelled, TransactionStatus.Dispute, TransactionStatus.Refunded],
         [TransactionStatus.Delivered] = [TransactionStatus.Closed, TransactionStatus.Dispute],
         [TransactionStatus.Dispute] = [TransactionStatus.Resolved, TransactionStatus.Refunded],
         [TransactionStatus.Resolved] = [],
@@ -90,3 +90,4 @@ public class Transaction : BaseEntity, IAuditableEntity
         UpdateTimestamp();
     }
 }
+
