@@ -1,6 +1,7 @@
 using MediatR;
 using SafeDeal.Application.Common.Exceptions;
 using SafeDeal.Domain.Enums;
+using SafeDeal.Domain.Events;
 using SafeDeal.Domain.Interfaces.Repositories;
 
 namespace SafeDeal.Application.Disputes.Commands.ResolveDispute;
@@ -9,11 +10,13 @@ public class ResolveDisputeCommandHandler : IRequestHandler<ResolveDisputeComman
 {
     private readonly IDisputeRepository _disputes;
     private readonly ITransactionRepository _transactions;
+    private readonly IPublisher _publisher;
 
-    public ResolveDisputeCommandHandler(IDisputeRepository disputes, ITransactionRepository transactions)
+    public ResolveDisputeCommandHandler(IDisputeRepository disputes, ITransactionRepository transactions, IPublisher publisher)
     {
         _disputes = disputes;
         _transactions = transactions;
+        _publisher = publisher;
     }
 
     public async Task Handle(ResolveDisputeCommand request, CancellationToken ct)
@@ -39,5 +42,7 @@ public class ResolveDisputeCommandHandler : IRequestHandler<ResolveDisputeComman
 
         await _disputes.UpdateAsync(dispute, ct);
         await _transactions.UpdateAsync(transaction, ct);
+
+        await _publisher.Publish(new TransactionStatusChangedEvent(transaction.Id, newStatus), ct);
     }
 }
