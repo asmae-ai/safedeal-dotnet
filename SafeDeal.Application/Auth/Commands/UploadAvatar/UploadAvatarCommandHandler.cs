@@ -35,7 +35,7 @@ public class UploadAvatarCommandHandler : IRequestHandler<UploadAvatarCommand, s
         using var stream = new FileStream(fullPath, FileMode.Create);
         await request.File.CopyToAsync(stream, ct);
 
-        var relativePath = Path.Combine("uploads", "avatars", fileName);
+        var relativePath = "uploads/avatars/" + fileName;
         user.UpdateAvatar(relativePath);
         await _users.UpdateAsync(user, ct);
 
