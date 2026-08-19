@@ -83,6 +83,24 @@ public class AuthController : ControllerBase
         return Ok(new { message = "Password changed successfully." });
     }
 
+    [HttpGet("me/avatar")]
+    [Authorize]
+    public async Task<IActionResult> GetAvatar(CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetCurrentUserQuery(UserId), ct);
+        if (result.AvatarPath is null)
+            return NotFound(new { message = "No avatar found." });
+
+        var fullPath = Path.Combine(_env.ContentRootPath, result.AvatarPath);
+        if (!System.IO.File.Exists(fullPath))
+            return NotFound(new { message = "Avatar file not found." });
+
+        var bytes = await System.IO.File.ReadAllBytesAsync(fullPath, ct);
+        var ext = Path.GetExtension(fullPath).ToLower();
+        var contentType = ext == ".png" ? "image/png" : "image/jpeg";
+        return File(bytes, contentType);
+    }
+
     [HttpPost("me/avatar")]
     [Authorize]
     public async Task<IActionResult> UploadAvatar(IFormFile file, CancellationToken ct)
@@ -144,3 +162,5 @@ public record VerifyEmailRequest(string Code);
 public record VerifyOtpRequest(string Code);
 public record UpdateProfileRequest(string? Name, string? Phone);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
+
+

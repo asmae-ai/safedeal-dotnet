@@ -21,6 +21,7 @@ public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, U
             user.Phone,
             user.IdentityStatus.ToString().ToLower(),
             user.ReputationScore.ToString("F2"),
-            user.CreatedAt.ToString("o"));
+            user.CreatedAt.ToString("o"),
+            user.AvatarPath);
     }
 }

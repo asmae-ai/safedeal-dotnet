@@ -8,4 +8,5 @@ public record UserDto(
     string? Phone,
     string IdentityStatus,
     string ReputationScore,
-    string CreatedAt);
+    string CreatedAt,
+    string? AvatarPath);
