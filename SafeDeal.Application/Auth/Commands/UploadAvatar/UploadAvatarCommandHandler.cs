@@ -26,16 +26,15 @@ public class UploadAvatarCommandHandler : IRequestHandler<UploadAvatarCommand, s
                 ["file"] = ["Only jpg and png files are allowed."]
             });
 
+        var fileName = $"{user.Id}_{Guid.NewGuid()}{ext}";
         var folder = Path.Combine(request.UploadPath, "avatars");
         Directory.CreateDirectory(folder);
-
-        var fileName = $"{user.Id}_{Guid.NewGuid()}{ext}";
         var fullPath = Path.Combine(folder, fileName);
 
         using var stream = new FileStream(fullPath, FileMode.Create);
         await request.File.CopyToAsync(stream, ct);
 
-        var relativePath = "uploads/avatars/" + fileName;
+        var relativePath = $"uploads/avatars/{fileName}";
         user.UpdateAvatar(relativePath);
         await _users.UpdateAsync(user, ct);
 
