@@ -36,16 +36,16 @@ public class GetAllTransactionsQueryHandler : IRequestHandler<GetAllTransactions
         }
 
         var total = await query.CountAsync(ct);
-        var lastPage = total == 0 ? 1 : (int)Math.Ceiling(total / (double)request.PageSize);
+        var lastPage = total == 0 ? 1 : (int)Math.Ceiling(total / (double)request.SafePageSize);
 
         var items = await query
             .OrderByDescending(t => t.CreatedAt)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
+            .Skip((request.SafePage - 1) * request.SafePageSize)
+            .Take(request.SafePageSize)
             .ToListAsync(ct);
 
         var dtos = items.Select(t => CreateTransactionCommandHandler.MapToDto(t, t.Vendor, t.Buyer)).ToList();
 
-        return new PagedResult<TransactionDto>(dtos, request.Page, lastPage, total);
+        return new PagedResult<TransactionDto>(dtos, request.SafePage, lastPage, total);
     }
 }

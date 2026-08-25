@@ -14,6 +14,7 @@ public class AppDbContext : DbContext, IApplicationDbContext
     public DbSet<TransactionLog> TransactionLogs => Set<TransactionLog>();
     public DbSet<Dispute> Disputes => Set<Dispute>();
     public DbSet<DisputeMessage> DisputeMessages => Set<DisputeMessage>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<IdentityVerification> IdentityVerifications => Set<IdentityVerification>();
 

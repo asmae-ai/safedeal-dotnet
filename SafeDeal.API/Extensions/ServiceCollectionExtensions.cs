@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using SafeDeal.Application.Common.Behaviors;
+using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 
@@ -49,6 +50,9 @@ public static class ServiceCollectionExtensions
                 typeof(SafeDeal.Application.Auth.Commands.Login.LoginCommand).Assembly);
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+            // Apres la validation : une commande rejetee en amont n'est pas une
+            // action metier, seules les tentatives reellement traitees sont tracees.
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(AuditBehavior<,>));
         });
 
         // FluentValidation
@@ -63,23 +67,44 @@ public static class ServiceCollectionExtensions
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
             // Les seuils restent des valeurs de production, mais deviennent
-            // ajustables par configuration plutot que codes en dur.
-            void AddIpPolicy(string name, int defaultLimit)
+            // ajustables par configuration (RateLimiting:<politique>).
+            // Identifie par compte quand l'utilisateur est connu, par IP sinon :
+            // un attaquant derriere une IP partagee ne doit pas pouvoir bloquer
+            // les autres utilisateurs du meme reseau.
+            void AddPolicy(string name, int defaultLimit, bool perUser = false)
             {
                 var limit = configuration.GetValue<int?>($"RateLimiting:{name}") ?? defaultLimit;
                 options.AddPolicy(name, context =>
-                    RateLimitPartition.GetFixedWindowLimiter(
-                        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                {
+                    var partition = perUser && context.User.Identity?.IsAuthenticated == true
+                        ? $"user:{context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value}"
+                        : $"ip:{context.Connection.RemoteIpAddress?.ToString() ?? "unknown"}";
+
+                    return RateLimitPartition.GetFixedWindowLimiter(
+                        $"{name}:{partition}",
                         _ => new FixedWindowRateLimiterOptions
                         {
                             PermitLimit = limit,
                             Window = TimeSpan.FromMinutes(1)
-                        }));
+                        });
+                });
             }
 
-            AddIpPolicy("login", 5);
-            AddIpPolicy("register", 10);
-            AddIpPolicy("otp", 3);
+            // --- Authentification : cibles privilegiees du bourrage d'identifiants ---
+            AddPolicy("login", 5);
+            AddPolicy("register", 10);
+            AddPolicy("otp", 3, perUser: true);
+            AddPolicy("verify-otp", 10);
+            AddPolicy("refresh", 30);
+            AddPolicy("password-reset", 5);
+            AddPolicy("email-verification", 10, perUser: true);
+
+            // --- Ecritures metier : bornees large, pour ne freiner personne ---
+            AddPolicy("mutations", 60, perUser: true);
+
+            // --- Webhooks : proteges par signature, mais le calcul HMAC lui-meme
+            //     ne doit pas devenir un vecteur de saturation. ---
+            AddPolicy("webhooks", 300);
         });
 
         // CORS

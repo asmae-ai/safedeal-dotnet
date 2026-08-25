@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using SafeDeal.Application.Disputes.Commands.OpenDispute;
 using SafeDeal.Application.Disputes.Commands.SubmitEvidence;
 using SafeDeal.Application.Disputes.Queries.GetDispute;
@@ -32,6 +33,7 @@ public class DisputesController : ControllerBase
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     [HttpPost]
+    [EnableRateLimiting("mutations")]
     public async Task<IActionResult> Open(int id, [FromForm] OpenDisputeRequest request, CancellationToken ct)
     {
         var (paths, error) = await StoreEvidenceAsync(request.Files, ct);
@@ -51,6 +53,7 @@ public class DisputesController : ControllerBase
     }
 
     [HttpPost("evidence")]
+    [EnableRateLimiting("mutations")]
     public async Task<IActionResult> SubmitEvidence(int id, [FromForm] EvidenceRequest request, CancellationToken ct)
     {
         var (paths, error) = await StoreEvidenceAsync(request.Files, ct);

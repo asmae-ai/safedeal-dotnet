@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MediatR;
@@ -30,6 +31,7 @@ namespace SafeDeal.API.Controllers.V1
         }
 
         [HttpPost("stripe")]
+        [EnableRateLimiting("webhooks")]
         public async Task<IActionResult> Stripe(CancellationToken ct)
         {
             var payload = await new StreamReader(Request.Body).ReadToEndAsync(ct);
@@ -82,6 +84,7 @@ namespace SafeDeal.API.Controllers.V1
         /// devait etre ressaisie a la main dans l'ecran admin.
         /// </summary>
         [HttpPost("sumsub")]
+        [EnableRateLimiting("webhooks")]
         public async Task<IActionResult> Sumsub(
             [FromServices] IIdentityVerificationService identityService,
             CancellationToken ct)

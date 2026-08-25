@@ -9,6 +9,18 @@ public class ExceptionMiddleware
     private readonly RequestDelegate _next;
     private readonly ILogger<ExceptionMiddleware> _logger;
 
+    /// <summary>
+    /// Les clés du dictionnaire d'erreurs suivent la même convention que le reste
+    /// du contrat. Sans DictionaryKeyPolicy, FluentValidation renvoyait "Email"
+    /// quand le client lit "email" : les erreurs de champ n'atteignaient jamais
+    /// l'interface.
+    /// </summary>
+    private static readonly JsonSerializerOptions SerializerOptions = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DictionaryKeyPolicy = JsonNamingPolicy.CamelCase
+    };
+
     public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> logger)
     {
         _next = next;
@@ -83,7 +95,6 @@ public class ExceptionMiddleware
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/json";
 
-        await context.Response.WriteAsync(JsonSerializer.Serialize(response,
-            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+        await context.Response.WriteAsync(JsonSerializer.Serialize(response, SerializerOptions));
     }
 }

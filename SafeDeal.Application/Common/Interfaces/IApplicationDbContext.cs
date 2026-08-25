@@ -10,6 +10,7 @@ public interface IApplicationDbContext
     DbSet<TransactionLog> TransactionLogs { get; }
     DbSet<Dispute> Disputes { get; }
     DbSet<DisputeMessage> DisputeMessages { get; }
+    DbSet<AuditLog> AuditLogs { get; }
     DbSet<Notification> Notifications { get; }
     DbSet<IdentityVerification> IdentityVerifications { get; }
     Task<int> SaveChangesAsync(CancellationToken ct = default);

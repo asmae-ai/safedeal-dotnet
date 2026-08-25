@@ -59,9 +59,14 @@ public class SafeDealFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
         // Les seuils de production restent testes ailleurs ; ici on veut pouvoir
         // enchainer les scenarios sans que la limitation de debit les masque.
-        builder.UseSetting("RateLimiting:login", "1000");
-        builder.UseSetting("RateLimiting:register", "1000");
-        builder.UseSetting("RateLimiting:otp", "1000");
+        foreach (var policy in new[]
+                 {
+                     "login", "register", "otp", "verify-otp", "refresh",
+                     "password-reset", "email-verification", "mutations", "webhooks"
+                 })
+        {
+            builder.UseSetting($"RateLimiting:{policy}", "100000");
+        }
         builder.UseSetting("Stripe:SecretKey", "sk_test_fake");
         builder.UseSetting("Stripe:WebhookSecret", "whsec_test_fake");
 

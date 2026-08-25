@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SafeDeal.Application.Common.Audit;
 using SafeDeal.Application.Common.Interfaces;
 using SafeDeal.Domain.Interfaces.Repositories;
 using SafeDeal.Domain.Interfaces.Services;
 using SafeDeal.Infrastructure.Persistence;
 using SafeDeal.Infrastructure.Persistence.Repositories;
+using SafeDeal.Infrastructure.Services.Audit;
 using SafeDeal.Infrastructure.Services.Auth;
 using SafeDeal.Infrastructure.Services.Cache;
 using SafeDeal.Infrastructure.Services.Email;
@@ -47,6 +49,10 @@ public static class DependencyInjection
         services.AddScoped<IPaymentService, StripeService>();
         services.AddHttpClient<IIdentityVerificationService, SumsubService>();
         services.AddScoped<IFileStorageService, LocalFileStorageService>();
+
+        // Audit : l'adresse IP et l'agent proviennent de la requete courante.
+        services.AddHttpContextAccessor();
+        services.AddScoped<IAuditLogger, AuditLogger>();
         return services;
     }
 }

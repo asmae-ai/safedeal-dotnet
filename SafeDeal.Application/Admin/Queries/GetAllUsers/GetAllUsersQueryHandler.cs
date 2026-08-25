@@ -32,12 +32,12 @@ public class GetAllUsersQueryHandler : IRequestHandler<GetAllUsersQuery, PagedRe
         }
 
         var total = await query.CountAsync(ct);
-        var lastPage = total == 0 ? 1 : (int)Math.Ceiling(total / (double)request.PageSize);
+        var lastPage = total == 0 ? 1 : (int)Math.Ceiling(total / (double)request.SafePageSize);
 
         var items = await query
             .OrderByDescending(u => u.CreatedAt)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
+            .Skip((request.SafePage - 1) * request.SafePageSize)
+            .Take(request.SafePageSize)
             .ToListAsync(ct);
 
         var dtos = items.Select(u => new AdminUserDto(
@@ -49,6 +49,6 @@ public class GetAllUsersQueryHandler : IRequestHandler<GetAllUsersQuery, PagedRe
             u.IsActive,
             u.CreatedAt.ToString("o"))).ToList();
 
-        return new PagedResult<AdminUserDto>(dtos, request.Page, lastPage, total);
+        return new PagedResult<AdminUserDto>(dtos, request.SafePage, lastPage, total);
     }
 }

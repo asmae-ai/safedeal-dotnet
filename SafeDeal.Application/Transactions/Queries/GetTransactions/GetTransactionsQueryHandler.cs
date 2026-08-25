@@ -19,8 +19,8 @@ public class GetTransactionsQueryHandler : IRequestHandler<GetTransactionsQuery,
 
     public async Task<PagedResult<TransactionDto>> Handle(GetTransactionsQuery request, CancellationToken ct)
     {
-        var (items, total) = await _transactions.GetByUserIdAsync(request.UserId, request.Page, request.PageSize, ct);
-        var lastPage = (int)Math.Ceiling(total / (double)request.PageSize);
+        var (items, total) = await _transactions.GetByUserIdAsync(request.UserId, request.SafePage, request.SafePageSize, ct);
+        var lastPage = (int)Math.Ceiling(total / (double)request.SafePageSize);
 
         var dtos = new List<TransactionDto>();
         foreach (var t in items)
@@ -30,6 +30,6 @@ public class GetTransactionsQueryHandler : IRequestHandler<GetTransactionsQuery,
             dtos.Add(CreateTransactionCommandHandler.MapToDto(t, vendor!, buyer));
         }
 
-        return new PagedResult<TransactionDto>(dtos, request.Page, lastPage, total);
+        return new PagedResult<TransactionDto>(dtos, request.SafePage, lastPage, total);
     }
 }

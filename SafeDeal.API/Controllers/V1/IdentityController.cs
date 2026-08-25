@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using SafeDeal.Application.Identity.Commands.SubmitVerification;
 using SafeDeal.Application.Identity.Queries.GetVerificationStatus;
 using SafeDeal.Domain.Interfaces.Services;
@@ -25,6 +26,7 @@ public class IdentityController : ControllerBase
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     [HttpPost]
+    [EnableRateLimiting("mutations")]
     public async Task<IActionResult> Submit([FromForm] SubmitVerificationRequest request, CancellationToken ct)
     {
         var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".pdf" };

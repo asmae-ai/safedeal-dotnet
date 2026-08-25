@@ -63,6 +63,7 @@ public class AuthController : ControllerBase
 
     // Sans jeton d'acces : c'est precisement quand il a expire qu'on appelle ici.
     [HttpPost("auth/refresh")]
+    [EnableRateLimiting("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenCommand command, CancellationToken ct)
     {
         var result = await _mediator.Send(command, ct);
@@ -87,6 +88,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("me/change-password")]
     [Authorize]
+    [EnableRateLimiting("mutations")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken ct)
     {
         await _mediator.Send(new ChangePasswordCommand(UserId, request.CurrentPassword, request.NewPassword), ct);
@@ -113,6 +115,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("me/avatar")]
     [Authorize]
+    [EnableRateLimiting("mutations")]
     public async Task<IActionResult> UploadAvatar(IFormFile file, CancellationToken ct)
     {
         var uploadPath = Path.Combine(_env.ContentRootPath, "uploads");
@@ -122,6 +125,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("auth/email/verify")]
     [Authorize]
+    [EnableRateLimiting("verify-otp")]
     public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailRequest request, CancellationToken ct)
     {
         await _mediator.Send(new VerifyEmailCommand(UserId, request.Code), ct);
@@ -130,6 +134,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("auth/email/resend")]
     [Authorize]
+    [EnableRateLimiting("email-verification")]
     public async Task<IActionResult> ResendVerification(CancellationToken ct)
     {
         await _mediator.Send(new ResendVerificationCommand(UserId), ct);
@@ -147,7 +152,7 @@ public class AuthController : ControllerBase
 
     // Sans jeton : c'est la seconde etape de la connexion, l'utilisateur n'en a pas encore.
     [HttpPost("verify-2fa")]
-    [EnableRateLimiting("login")]
+    [EnableRateLimiting("verify-otp")]
     public async Task<IActionResult> VerifyTwoFactor([FromBody] VerifyTwoFactorCommand command, CancellationToken ct)
     {
         var result = await _mediator.Send(command, ct);
@@ -156,6 +161,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("me/two-factor")]
     [Authorize]
+    [EnableRateLimiting("mutations")]
     public async Task<IActionResult> SetTwoFactor([FromBody] SetTwoFactorRequest request, CancellationToken ct)
     {
         await _mediator.Send(new SetTwoFactorCommand(UserId, request.Enabled), ct);
@@ -169,6 +175,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("forgot-password")]
+    [EnableRateLimiting("password-reset")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordCommand command, CancellationToken ct)
     {
         await _mediator.Send(command, ct);
@@ -176,6 +183,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("reset-password")]
+    [EnableRateLimiting("password-reset")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordCommand command, CancellationToken ct)
     {
         await _mediator.Send(command, ct);
