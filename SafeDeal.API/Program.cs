@@ -34,12 +34,20 @@ if (app.Environment.IsDevelopment())
     });
 }
 
+// Seuls les avatars sont servis en acces libre. Les pieces d'identite et les
+// preuves de litige restent derriere des endpoints authentifies : exposer tout
+// le dossier uploads rendait une piece d'identite lisible par quiconque en
+// connaissait le chemin, que les DTO admin renvoient.
 var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "uploads");
-Directory.CreateDirectory(uploadsPath);
+var avatarsPath = Path.Combine(uploadsPath, "avatars");
+Directory.CreateDirectory(avatarsPath);
+Directory.CreateDirectory(Path.Combine(uploadsPath, "identity"));
+Directory.CreateDirectory(Path.Combine(uploadsPath, "disputes"));
+
 app.UseStaticFiles(new StaticFileOptions
 {
-    FileProvider = new PhysicalFileProvider(uploadsPath),
-    RequestPath = "/uploads"
+    FileProvider = new PhysicalFileProvider(avatarsPath),
+    RequestPath = "/uploads/avatars"
 });
 
 app.UseApiMiddlewares();

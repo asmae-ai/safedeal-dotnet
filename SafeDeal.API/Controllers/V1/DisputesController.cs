@@ -20,11 +20,13 @@ public class DisputesController : ControllerBase
 
     private readonly IMediator _mediator;
     private readonly IFileStorageService _fileStorage;
+    private readonly IWebHostEnvironment _env;
 
-    public DisputesController(IMediator mediator, IFileStorageService fileStorage)
+    public DisputesController(IMediator mediator, IFileStorageService fileStorage, IWebHostEnvironment env)
     {
         _mediator = mediator;
         _fileStorage = fileStorage;
+        _env = env;
     }
 
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -56,6 +58,39 @@ public class DisputesController : ControllerBase
 
         await _mediator.Send(new SubmitEvidenceCommand(id, UserId, request.Description, paths), ct);
         return Ok(new { message = "Preuve soumise avec succès." });
+    }
+
+    /// <summary>
+    /// Sert une piece jointe du litige. Le dossier uploads/disputes n'est plus
+    /// expose en statique : seules les deux parties peuvent lire les preuves.
+    /// </summary>
+    [HttpGet("evidence/{fileName}")]
+    public async Task<IActionResult> GetEvidence(int id, string fileName, CancellationToken ct)
+    {
+        // Verifie l'appartenance a la transaction avant tout acces disque.
+        var dispute = await _mediator.Send(new GetDisputeQuery(id, UserId), ct);
+
+        var known = dispute.Evidences.SelectMany(e => e.Files)
+            .Any(f => Path.GetFileName(f) == fileName);
+        if (!known)
+            return NotFound(new { message = "Evidence not found for this dispute." });
+
+        // Path.GetFileName neutralise toute tentative de remontee de repertoire.
+        var safeName = Path.GetFileName(fileName);
+        var fullPath = Path.Combine(_env.ContentRootPath, "uploads", "disputes", safeName);
+        if (!System.IO.File.Exists(fullPath))
+            return NotFound(new { message = "File not found on disk." });
+
+        var bytes = await System.IO.File.ReadAllBytesAsync(fullPath, ct);
+        var ext = Path.GetExtension(safeName).ToLowerInvariant();
+        var contentType = ext switch
+        {
+            ".png" => "image/png",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".pdf" => "application/pdf",
+            _ => "application/octet-stream"
+        };
+        return File(bytes, contentType);
     }
 
     private async Task<(List<string> Paths, string? Error)> StoreEvidenceAsync(

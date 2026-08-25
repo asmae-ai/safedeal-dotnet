@@ -6,6 +6,8 @@ using SafeDeal.Application.Admin.Commands.RejectIdentity;
 using SafeDeal.Application.Admin.Queries.GetAllDisputes;
 using SafeDeal.Application.Admin.Queries.GetAllTransactions;
 using SafeDeal.Application.Admin.Queries.GetAllUsers;
+using SafeDeal.Application.Admin.Queries.GetDisputeStats;
+using SafeDeal.Application.Admin.Queries.GetIdentityStats;
 using SafeDeal.Application.Admin.Queries.GetPendingVerifications;
 using SafeDeal.Application.Admin.Queries.GetStatistics;
 using SafeDeal.Application.Disputes.Commands.ResolveDispute;
@@ -40,16 +42,38 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("users")]
-    public async Task<IActionResult> GetUsers([FromQuery] int page = 1, CancellationToken ct = default)
+    public async Task<IActionResult> GetUsers(
+        [FromQuery] int page = 1,
+        [FromQuery] string? search = null,
+        [FromQuery] string? role = null,
+        CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetAllUsersQuery(page), ct);
-        return Ok(new { data = result });
+        var result = await _mediator.Send(new GetAllUsersQuery(page, 20, search, role), ct);
+        return Ok(new
+        {
+            data = result.Data,
+            meta = new { current_page = result.CurrentPage, last_page = result.LastPage, total = result.Total }
+        });
     }
 
     [HttpGet("identities")]
     public async Task<IActionResult> GetPendingIdentities(CancellationToken ct)
     {
         var result = await _mediator.Send(new GetPendingVerificationsQuery(), ct);
+        return Ok(new { data = result });
+    }
+
+    [HttpGet("identities/stats")]
+    public async Task<IActionResult> GetIdentityStats(CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetIdentityStatsQuery(), ct);
+        return Ok(new { data = result });
+    }
+
+    [HttpGet("disputes/stats")]
+    public async Task<IActionResult> GetDisputeStats(CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetDisputeStatsQuery(), ct);
         return Ok(new { data = result });
     }
 
@@ -68,9 +92,13 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("transactions")]
-    public async Task<IActionResult> GetAllTransactions([FromQuery] int page = 1, CancellationToken ct = default)
+    public async Task<IActionResult> GetAllTransactions(
+        [FromQuery] int page = 1,
+        [FromQuery] string? search = null,
+        [FromQuery] string? status = null,
+        CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetAllTransactionsQuery(page), ct);
+        var result = await _mediator.Send(new GetAllTransactionsQuery(page, 20, search, status), ct);
         return Ok(new
         {
             data = result.Data,

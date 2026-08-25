@@ -4,4 +4,8 @@ using SafeDeal.Application.Transactions.DTOs;
 
 namespace SafeDeal.Application.Admin.Queries.GetAllTransactions;
 
-public record GetAllTransactionsQuery(int Page = 1, int PageSize = 20) : IRequest<PagedResult<TransactionDto>>;
+public record GetAllTransactionsQuery(
+    int Page = 1,
+    int PageSize = 20,
+    string? Search = null,
+    string? Status = null) : IRequest<PagedResult<TransactionDto>>;
