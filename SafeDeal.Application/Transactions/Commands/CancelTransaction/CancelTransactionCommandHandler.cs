@@ -26,6 +26,9 @@ public class CancelTransactionCommandHandler : IRequestHandler<CancelTransaction
         var transaction = await _transactions.GetByIdAsync(request.TransactionId, ct)
             ?? throw new NotFoundException("Transaction", request.TransactionId);
 
+        if (transaction.VendorId != request.UserId && transaction.BuyerId != request.UserId)
+            throw new ForbiddenException("Only the vendor or the buyer can cancel this transaction.");
+
         transaction.Transition(TransactionStatus.Cancelled);
         await _transactions.UpdateAsync(transaction, ct);
 

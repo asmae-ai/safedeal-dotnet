@@ -26,6 +26,10 @@ public class DeliverTransactionCommandHandler : IRequestHandler<DeliverTransacti
         var transaction = await _transactions.GetByIdAsync(request.TransactionId, ct)
             ?? throw new NotFoundException("Transaction", request.TransactionId);
 
+        // Seul l'acheteur constate la réception : c'est ce constat qui ouvre la libération des fonds.
+        if (transaction.BuyerId != request.BuyerId)
+            throw new ForbiddenException("Only the buyer can mark this transaction as delivered.");
+
         transaction.Transition(TransactionStatus.Delivered);
         await _transactions.UpdateAsync(transaction, ct);
 

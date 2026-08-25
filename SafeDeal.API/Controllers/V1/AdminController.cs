@@ -79,9 +79,9 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("disputes")]
-    public async Task<IActionResult> GetAllDisputes(CancellationToken ct)
+    public async Task<IActionResult> GetAllDisputes([FromQuery] string status = "open", CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetAllDisputesQuery(), ct);
+        var result = await _mediator.Send(new GetAllDisputesQuery(status), ct);
         return Ok(new { data = result });
     }
 

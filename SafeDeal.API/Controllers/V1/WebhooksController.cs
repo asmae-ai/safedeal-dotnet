@@ -4,10 +4,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using MediatR;
 using SafeDeal.Application.Transactions.Commands.PayTransaction;
 using Stripe;
-using Stripe.Forwarding;
 
 namespace SafeDeal.API.Controllers.V1
 {
@@ -17,11 +17,13 @@ namespace SafeDeal.API.Controllers.V1
     {
         private readonly IConfiguration _config;
         private readonly IMediator _mediator;
+        private readonly ILogger<WebhooksController> _logger;
 
-        public WebhooksController(IConfiguration config, IMediator mediator)
+        public WebhooksController(IConfiguration config, IMediator mediator, ILogger<WebhooksController> logger)
         {
             _config = config;
             _mediator = mediator;
+            _logger = logger;
         }
 
         [HttpPost("stripe")]
@@ -31,11 +33,6 @@ namespace SafeDeal.API.Controllers.V1
             var signature = Request.Headers["Stripe-Signature"].ToString();
             var secret = _config["Stripe:WebhookSecret"]!;
 
-            Console.WriteLine($"=== WEBHOOK DEBUG ===");
-            Console.WriteLine($"Payload length: {payload.Length}");
-            Console.WriteLine($"Signature: {(signature.Length > 50 ? signature[..50] : signature)}...");
-            Console.WriteLine($"Secret: {(secret.Length > 20 ? secret[..20] : secret)}...");
-
             Event stripeEvent;
             try
             {
@@ -43,21 +40,34 @@ namespace SafeDeal.API.Controllers.V1
             }
             catch (StripeException ex)
             {
-                Console.WriteLine($"Stripe error: {ex.Message}");
-                return BadRequest(new { message = ex.Message });
+                // Signature invalide : la requête ne vient pas de Stripe.
+                _logger.LogWarning("Rejected Stripe webhook: {Reason}", ex.Message);
+                return BadRequest(new { message = "Invalid signature." });
+            }
+            catch (Exception ex)
+            {
+                // Payload illisible. Un 500 ferait réessayer Stripe indéfiniment,
+                // alors qu'aucun rejeu ne rendra ce corps de requête valide.
+                _logger.LogError(ex, "Malformed Stripe webhook payload.");
+                return BadRequest(new { message = "Malformed payload." });
             }
 
             if (stripeEvent.Type == EventTypes.CheckoutSessionCompleted)
             {
                 var session = stripeEvent.Data.Object as Stripe.Checkout.Session;
-                if (session?.Metadata != null &&
-                    session.Metadata.TryGetValue("transaction_id", out var transactionId))
+
+                if (session?.Metadata is null ||
+                    !session.Metadata.TryGetValue("transaction_id", out var rawId) ||
+                    !int.TryParse(rawId, out var transactionId))
                 {
-                    await _mediator.Send(new PayTransactionCommand(
-                        int.Parse(transactionId),
-                        session.Id,
-                        session.PaymentIntentId ?? ""), ct);
+                    _logger.LogWarning("Stripe session {SessionId} carries no usable transaction_id.", session?.Id);
+                    return Ok(new { message = "Ignored: no transaction reference." });
                 }
+
+                await _mediator.Send(new PayTransactionCommand(
+                    transactionId,
+                    session.Id,
+                    session.PaymentIntentId ?? ""), ct);
             }
 
             return Ok(new { message = "Webhook handled." });

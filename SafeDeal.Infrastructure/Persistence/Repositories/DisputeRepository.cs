@@ -12,11 +12,13 @@ public class DisputeRepository : IDisputeRepository
     public async Task<Dispute?> GetByIdAsync(int id, CancellationToken ct = default)
         => await _context.Disputes
             .Include(d => d.OpenedBy)
+            .Include(d => d.Messages).ThenInclude(m => m.Author)
             .FirstOrDefaultAsync(d => d.Id == id, ct);
 
     public async Task<Dispute?> GetByTransactionIdAsync(int transactionId, CancellationToken ct = default)
         => await _context.Disputes
             .Include(d => d.OpenedBy)
+            .Include(d => d.Messages).ThenInclude(m => m.Author)
             .FirstOrDefaultAsync(d => d.TransactionId == transactionId, ct);
 
     public async Task AddAsync(Dispute dispute, CancellationToken ct = default)

@@ -1,4 +1,5 @@
 using MediatR;
+using SafeDeal.Application.Common.Extensions;
 using SafeDeal.Application.Auth.DTOs;
 using SafeDeal.Application.Common.Exceptions;
 using SafeDeal.Domain.Interfaces.Repositories;
@@ -38,7 +39,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             user.Role.ToString().ToLower(),
             user.Phone,
             user.IdentityStatus.ToString().ToLower(),
-            user.ReputationScore.ToString("F2"),
+            user.ReputationScore.ToApiString(),
             user.CreatedAt.ToString("o"), user.AvatarPath));
     }
 }

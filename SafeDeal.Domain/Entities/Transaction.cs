@@ -26,7 +26,8 @@ public class Transaction : BaseEntity, IAuditableEntity
     private static readonly Dictionary<TransactionStatus, TransactionStatus[]> _allowedTransitions = new()
     {
         [TransactionStatus.PendingPayment] = [TransactionStatus.PaymentReceived, TransactionStatus.Cancelled],
-        [TransactionStatus.PaymentReceived] = [TransactionStatus.InShipping, TransactionStatus.Cancelled],
+        // Un acheteur qui a payé et que le vendeur n'expédie jamais doit pouvoir ouvrir un litige.
+        [TransactionStatus.PaymentReceived] = [TransactionStatus.InShipping, TransactionStatus.Cancelled, TransactionStatus.Dispute],
         [TransactionStatus.InShipping] = [TransactionStatus.Delivered, TransactionStatus.Cancelled, TransactionStatus.Dispute, TransactionStatus.Refunded],
         [TransactionStatus.Delivered] = [TransactionStatus.Closed, TransactionStatus.Dispute],
         [TransactionStatus.Dispute] = [TransactionStatus.Resolved, TransactionStatus.Refunded],

@@ -1,6 +1,8 @@
 using MediatR;
 using SafeDeal.Application.Common.Exceptions;
 using SafeDeal.Application.Transactions.Commands.CheckoutTransaction;
+using SafeDeal.Domain.Enums;
+using SafeDeal.Domain.Exceptions;
 using SafeDeal.Domain.Interfaces.Repositories;
 using SafeDeal.Domain.Interfaces.Services;
 
@@ -25,14 +27,15 @@ public class CheckoutTransactionCommandHandler : IRequestHandler<CheckoutTransac
         if (transaction.BuyerId != request.UserId)
             throw new ForbiddenException("Only the buyer can checkout this transaction.");
 
-        if (transaction.StripeSessionId is not null)
-            throw new ValidationException(new Dictionary<string, string[]>
-            {
-                ["transaction"] = ["A checkout session already exists for this transaction."]
-            });
+        // Une transaction ne peut être payée qu'une seule fois : c'est le statut qui fait foi,
+        // pas la présence d'une session Stripe. Un checkout abandonné doit rester rejouable.
+        if (transaction.Status != TransactionStatus.PendingPayment)
+            throw new BusinessRuleException(
+                "This transaction is no longer awaiting payment and cannot be paid again.");
 
         var (url, sessionId) = await _paymentService.CreateCheckoutSessionAsync(
             transaction.Id,
+            transaction.SecureToken,
             transaction.Amount.Amount,
             transaction.Amount.Currency,
             transaction.Title, ct);

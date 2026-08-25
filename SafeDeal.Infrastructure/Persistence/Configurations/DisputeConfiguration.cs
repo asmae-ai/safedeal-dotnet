@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SafeDeal.Domain.Entities;
 
@@ -15,7 +16,12 @@ public class DisputeConfiguration : IEntityTypeConfiguration<Dispute>
         builder.Property(d => d.EvidenceFiles)
             .HasConversion(
                 v => string.Join(',', v),
-                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList());
+                v => v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList())
+            // Sans ValueComparer, EF compare la collection par référence et rate les ajouts.
+            .Metadata.SetValueComparer(new ValueComparer<ICollection<string>>(
+                (a, b) => a!.SequenceEqual(b!),
+                v => v.Aggregate(0, (acc, s) => HashCode.Combine(acc, s.GetHashCode())),
+                v => v.ToList()));
 
         builder.HasOne(d => d.OpenedBy)
             .WithMany()

@@ -31,17 +31,27 @@ public class GetDisputeQueryHandler : IRequestHandler<GetDisputeQuery, DisputeDt
 
         var openedBy = await _users.GetByIdAsync(dispute.OpenedByUserId, ct);
 
+        var evidences = dispute.Messages
+            .OrderBy(m => m.CreatedAt)
+            .Select(m => new EvidenceDto(
+                m.AuthorUserId,
+                m.Author?.Name ?? "Utilisateur",
+                // Le rôle vient de la transaction elle-même, plus d'une alternance arbitraire.
+                m.AuthorUserId == transaction.VendorId ? "vendor" : "buyer",
+                m.Body,
+                m.Files,
+                m.CreatedAt.ToString("o")))
+            .ToList();
+
         return new DisputeDto(
             dispute.Id,
+            dispute.TransactionId,
             dispute.Category,
             dispute.Description,
             dispute.Status.ToString().ToLower(),
             dispute.CreatedAt.ToString("o"),
+            dispute.ResolutionNote,
             new UserOpenedByDto(openedBy!.Id, openedBy.Name, openedBy.Email),
-            dispute.EvidenceFiles.Select((f, i) => new EvidenceDto(
-                i % 2 == 0 ? "buyer" : "vendor",
-                string.Empty,
-                [f],
-                dispute.CreatedAt.ToString("o"))));
+            evidences);
     }
 }

@@ -54,7 +54,14 @@ public class ExceptionMiddleware
                 response = new { message = ex.Message };
                 break;
 
-            case BusinessRuleException ex:
+            case UnauthorizedDomainException ex:
+                statusCode = 403;
+                response = new { message = ex.Message };
+                break;
+
+            // Couvre BusinessRuleException, InvalidTransitionException et toute
+            // future règle métier : une violation du domaine est une 422, jamais une 500.
+            case DomainException ex:
                 statusCode = 422;
                 response = new { message = ex.Message };
                 break;

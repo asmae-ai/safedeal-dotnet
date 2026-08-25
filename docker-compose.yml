@@ -12,8 +12,7 @@ services:
       - Jwt__Audience=SafeDeal
       - Stripe__SecretKey=sk_test_VOTRE_CLE_SECRETE
       - Stripe__WebhookSecret=whsec_VOTRE_SECRET
-      - Stripe__SuccessUrl=http://localhost:5173/payment/success
-      - Stripe__CancelUrl=http://localhost:5173/payment/cancel
+      - Frontend__BaseUrl=http://localhost:5173
       - Sumsub__WebhookSecret=sumsub_secret
       - Email__Host=smtp.gmail.com
       - Email__Port=587

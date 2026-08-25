@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using SafeDeal.Application.Disputes.Commands.OpenDispute;
 using SafeDeal.Application.Disputes.Commands.SubmitEvidence;
 using SafeDeal.Application.Disputes.Queries.GetDispute;
+using SafeDeal.Domain.Interfaces.Services;
 using System.Security.Claims;
 
 namespace SafeDeal.API.Controllers.V1;
@@ -13,16 +14,30 @@ namespace SafeDeal.API.Controllers.V1;
 [Authorize]
 public class DisputesController : ControllerBase
 {
+    private static readonly string[] AllowedExtensions = [".jpg", ".jpeg", ".png", ".pdf"];
+    private const long MaxFileSize = 5 * 1024 * 1024;
+    private const int MaxFiles = 4;
+
     private readonly IMediator _mediator;
-    public DisputesController(IMediator mediator) => _mediator = mediator;
+    private readonly IFileStorageService _fileStorage;
+
+    public DisputesController(IMediator mediator, IFileStorageService fileStorage)
+    {
+        _mediator = mediator;
+        _fileStorage = fileStorage;
+    }
 
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
     [HttpPost]
-    public async Task<IActionResult> Open(int id, [FromBody] OpenDisputeRequest request, CancellationToken ct)
+    public async Task<IActionResult> Open(int id, [FromForm] OpenDisputeRequest request, CancellationToken ct)
     {
+        var (paths, error) = await StoreEvidenceAsync(request.Files, ct);
+        if (error is not null) return UnprocessableEntity(new { message = error });
+
         var result = await _mediator.Send(
-            new OpenDisputeCommand(id, UserId, request.Category, request.Description, request.Files ?? []), ct);
+            new OpenDisputeCommand(id, UserId, request.Category, request.Description, paths), ct);
+
         return Ok(new { message = "Litige ouvert avec succès.", data = result });
     }
 
@@ -34,12 +49,43 @@ public class DisputesController : ControllerBase
     }
 
     [HttpPost("evidence")]
-    public async Task<IActionResult> SubmitEvidence(int id, [FromBody] EvidenceRequest request, CancellationToken ct)
+    public async Task<IActionResult> SubmitEvidence(int id, [FromForm] EvidenceRequest request, CancellationToken ct)
     {
-        await _mediator.Send(new SubmitEvidenceCommand(id, UserId, request.Description, request.Files ?? []), ct);
+        var (paths, error) = await StoreEvidenceAsync(request.Files, ct);
+        if (error is not null) return UnprocessableEntity(new { message = error });
+
+        await _mediator.Send(new SubmitEvidenceCommand(id, UserId, request.Description, paths), ct);
         return Ok(new { message = "Preuve soumise avec succès." });
+    }
+
+    private async Task<(List<string> Paths, string? Error)> StoreEvidenceAsync(
+        IFormFileCollection? files, CancellationToken ct)
+    {
+        var paths = new List<string>();
+        if (files is null || files.Count == 0) return (paths, null);
+
+        if (files.Count > MaxFiles)
+            return (paths, $"You can attach at most {MaxFiles} files.");
+
+        foreach (var file in files)
+        {
+            if (!_fileStorage.IsValidExtension(file.FileName, AllowedExtensions))
+                return (paths, "Only JPG, PNG and PDF files are allowed.");
+
+            if (!_fileStorage.IsValidSize(file.Length, MaxFileSize))
+                return (paths, "Each file must be 5 MB or smaller.");
+        }
+
+        foreach (var file in files)
+        {
+            var path = await _fileStorage.SaveAsync(
+                file.OpenReadStream(), file.FileName, "disputes", ct);
+            paths.Add(path.Replace('\\', '/'));
+        }
+
+        return (paths, null);
     }
 }
 
-public record OpenDisputeRequest(string Category, string Description, IEnumerable<string>? Files);
-public record EvidenceRequest(string Description, IEnumerable<string>? Files);
+public record OpenDisputeRequest(string Category, string Description, IFormFileCollection? Files);
+public record EvidenceRequest(string Description, IFormFileCollection? Files);

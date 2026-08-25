@@ -29,42 +29,47 @@ public class TransactionStatusChangedNotificationHandler : INotificationHandler<
         switch (evt.NewStatus)
         {
             case TransactionStatus.PaymentReceived:
-                messages.Add((transaction.VendorId, $"Paiement reçu pour la transaction '{transaction.Title}'. Vous pouvez expédier la commande."));
+                messages.Add((transaction.VendorId, $"Paiement reÃ§u pour la transaction Â« {transaction.Title} Â». Vous pouvez expÃ©dier la commande."));
                 if (transaction.BuyerId.HasValue)
-                    messages.Add((transaction.BuyerId.Value, $"Votre paiement pour '{transaction.Title}' a été reçu et sécurisé."));
+                    messages.Add((transaction.BuyerId.Value, $"Votre paiement pour Â« {transaction.Title} Â» a Ã©tÃ© reÃ§u et sÃ©curisÃ©."));
                 break;
 
             case TransactionStatus.InShipping:
                 if (transaction.BuyerId.HasValue)
-                    messages.Add((transaction.BuyerId.Value, $"Votre commande '{transaction.Title}' a été expédiée."));
+                    messages.Add((transaction.BuyerId.Value, $"Votre commande Â« {transaction.Title} Â» a Ã©tÃ© expÃ©diÃ©e."));
                 break;
 
             case TransactionStatus.Delivered:
-                messages.Add((transaction.VendorId, $"La commande '{transaction.Title}' a été marquée comme livrée."));
+                messages.Add((transaction.VendorId, $"La commande Â« {transaction.Title} Â» a Ã©tÃ© marquÃ©e comme livrÃ©e."));
                 break;
 
             case TransactionStatus.Closed:
-                messages.Add((transaction.VendorId, $"La transaction '{transaction.Title}' est terminée. Les fonds ont été libérés."));
+                messages.Add((transaction.VendorId, $"La transaction Â« {transaction.Title} Â» est terminÃ©e. Les fonds ont Ã©tÃ© libÃ©rÃ©s."));
                 if (transaction.BuyerId.HasValue)
-                    messages.Add((transaction.BuyerId.Value, $"La transaction '{transaction.Title}' est terminée."));
+                    messages.Add((transaction.BuyerId.Value, $"La transaction Â« {transaction.Title} Â» est terminÃ©e."));
                 break;
 
             case TransactionStatus.Cancelled:
-                messages.Add((transaction.VendorId, $"La transaction '{transaction.Title}' a été annulée."));
+                messages.Add((transaction.VendorId, $"La transaction Â« {transaction.Title} Â» a Ã©tÃ© annulÃ©e."));
                 if (transaction.BuyerId.HasValue)
-                    messages.Add((transaction.BuyerId.Value, $"La transaction '{transaction.Title}' a été annulée."));
+                    messages.Add((transaction.BuyerId.Value, $"La transaction Â« {transaction.Title} Â» a Ã©tÃ© annulÃ©e."));
+                break;
+
+            // Le passage en litige est notifiÃ© par DisputeOpenedNotificationHandler,
+            // qui connaÃ®t l'auteur de la rÃ©clamation. Pas de doublon ici.
+            case TransactionStatus.Dispute:
                 break;
 
             case TransactionStatus.Refunded:
                 if (transaction.BuyerId.HasValue)
-                    messages.Add((transaction.BuyerId.Value, $"Vous avez été remboursé pour la transaction '{transaction.Title}'."));
-                messages.Add((transaction.VendorId, $"La transaction '{transaction.Title}' a été remboursée à l acheteur."));
+                    messages.Add((transaction.BuyerId.Value, $"Vous avez Ã©tÃ© remboursÃ© pour la transaction Â« {transaction.Title} Â»."));
+                messages.Add((transaction.VendorId, $"La transaction Â« {transaction.Title} Â» a Ã©tÃ© remboursÃ©e Ã  l'acheteur."));
                 break;
 
             case TransactionStatus.Resolved:
                 if (transaction.BuyerId.HasValue)
-                    messages.Add((transaction.BuyerId.Value, $"Le litige pour '{transaction.Title}' a été résolu."));
-                messages.Add((transaction.VendorId, $"Le litige pour '{transaction.Title}' a été résolu."));
+                    messages.Add((transaction.BuyerId.Value, $"Le litige sur Â« {transaction.Title} Â» a Ã©tÃ© rÃ©solu en faveur du vendeur."));
+                messages.Add((transaction.VendorId, $"Le litige sur Â« {transaction.Title} Â» a Ã©tÃ© rÃ©solu en votre faveur. Les fonds vous sont acquis."));
                 break;
         }
 

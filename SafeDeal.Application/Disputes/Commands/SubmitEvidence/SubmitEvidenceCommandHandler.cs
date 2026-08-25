@@ -26,8 +26,9 @@ public class SubmitEvidenceCommandHandler : IRequestHandler<SubmitEvidenceComman
         var dispute = await _disputes.GetByTransactionIdAsync(request.TransactionId, ct)
             ?? throw new NotFoundException("Dispute", request.TransactionId);
 
-        foreach (var file in request.FilePaths)
-            dispute.AddEvidence(file);
+        // Le texte de la réponse est la pièce maîtresse : il est stocké avec son auteur,
+        // les fichiers ne sont que des pièces jointes.
+        dispute.AddMessage(request.UserId, request.Description, request.FilePaths);
 
         await _disputes.UpdateAsync(dispute, ct);
     }

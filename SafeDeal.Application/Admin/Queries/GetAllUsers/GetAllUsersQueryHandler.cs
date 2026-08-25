@@ -1,4 +1,5 @@
 using MediatR;
+using SafeDeal.Application.Common.Extensions;
 using Microsoft.EntityFrameworkCore;
 using SafeDeal.Application.Admin.DTOs;
 using SafeDeal.Application.Common.Interfaces;
@@ -20,7 +21,7 @@ public class GetAllUsersQueryHandler : IRequestHandler<GetAllUsersQuery, IEnumer
                 u.Id, u.Name, u.Email,
                 u.Role.ToString().ToLower(),
                 u.IdentityStatus.ToString().ToLower(),
-                u.ReputationScore.ToString("F2"),
+                u.ReputationScore.ToApiString(),
                 u.IsEmailVerified,
                 u.IsActive,
                 u.CreatedAt.ToString("o")))

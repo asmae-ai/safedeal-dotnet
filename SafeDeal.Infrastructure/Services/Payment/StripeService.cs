@@ -16,8 +16,12 @@ public class StripeService : IPaymentService
     }
 
     public async Task<(string CheckoutUrl, string SessionId)> CreateCheckoutSessionAsync(
-        int transactionId, decimal amount, string currency, string title, CancellationToken ct = default)
+        int transactionId, string secureToken, decimal amount, string currency, string title, CancellationToken ct = default)
     {
+        // Stripe doit renvoyer l'acheteur sur la page de paiement de SA transaction,
+        // que PaymentPage identifie par le token du lien sécurisé.
+        var frontend = (_config["Frontend:BaseUrl"] ?? "http://localhost:5173").TrimEnd('/');
+
         var options = new SessionCreateOptions
         {
             PaymentMethodTypes = ["card"],
@@ -38,8 +42,8 @@ public class StripeService : IPaymentService
                 }
             ],
             Mode = "payment",
-            SuccessUrl = _config["Stripe:SuccessUrl"],
-            CancelUrl = _config["Stripe:CancelUrl"],
+            SuccessUrl = $"{frontend}/pay/{secureToken}?payment=success",
+            CancelUrl = $"{frontend}/pay/{secureToken}?payment=cancel",
             Metadata = new Dictionary<string, string>
             {
                 ["transaction_id"] = transactionId.ToString()

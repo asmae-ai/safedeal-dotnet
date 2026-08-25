@@ -9,13 +9,16 @@ public class DisputeOpenedNotificationHandler : INotificationHandler<DisputeOpen
 {
     private readonly INotificationRepository _notifications;
     private readonly ITransactionRepository _transactions;
+    private readonly IDisputeRepository _disputes;
 
     public DisputeOpenedNotificationHandler(
         INotificationRepository notifications,
-        ITransactionRepository transactions)
+        ITransactionRepository transactions,
+        IDisputeRepository disputes)
     {
         _notifications = notifications;
         _transactions = transactions;
+        _disputes = disputes;
     }
 
     public async Task Handle(DisputeOpenedEvent evt, CancellationToken ct)
@@ -23,8 +26,20 @@ public class DisputeOpenedNotificationHandler : INotificationHandler<DisputeOpen
         var transaction = await _transactions.GetByIdAsync(evt.TransactionId, ct);
         if (transaction is null) return;
 
-        var notification = Notification.Create(transaction.VendorId,
-            $"Un litige a �t� ouvert pour la transaction '{transaction.Title}'.");
-        await _notifications.AddAsync(notification, ct);
+        var dispute = await _disputes.GetByIdAsync(evt.DisputeId, ct);
+        var openedByVendor = dispute is not null && dispute.OpenedByUserId == transaction.VendorId;
+
+        // Chaque partie reçoit le message qui correspond à son rôle : celle qui a
+        // ouvert le litige reçoit un accusé, l'autre une demande de réponse.
+        var author = openedByVendor ? transaction.VendorId : transaction.BuyerId;
+        var counterparty = openedByVendor ? transaction.BuyerId : transaction.VendorId;
+
+        if (author.HasValue)
+            await _notifications.AddAsync(Notification.Create(author.Value,
+                $"Votre litige sur « {transaction.Title} » a bien été enregistré. Les fonds restent bloqués jusqu'à la décision."), ct);
+
+        if (counterparty.HasValue)
+            await _notifications.AddAsync(Notification.Create(counterparty.Value,
+                $"Un litige a été ouvert sur la transaction « {transaction.Title} ». Répondez pour faire valoir votre version."), ct);
     }
 }

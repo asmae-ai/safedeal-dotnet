@@ -1,4 +1,5 @@
 using MediatR;
+using SafeDeal.Application.Common.Extensions;
 using SafeDeal.Application.Auth.DTOs;
 using SafeDeal.Application.Common.Exceptions;
 using SafeDeal.Domain.Entities;
@@ -55,6 +56,6 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
         user.Role.ToString().ToLower(),
         user.Phone,
         user.IdentityStatus.ToString().ToLower(),
-        user.ReputationScore.ToString("F2"),
+        user.ReputationScore.ToApiString(),
         user.CreatedAt.ToString("o"), user.AvatarPath);
 }

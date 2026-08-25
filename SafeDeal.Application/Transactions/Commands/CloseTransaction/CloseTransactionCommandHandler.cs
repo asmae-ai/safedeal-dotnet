@@ -26,6 +26,10 @@ public class CloseTransactionCommandHandler : IRequestHandler<CloseTransactionCo
         var transaction = await _transactions.GetByIdAsync(request.TransactionId, ct)
             ?? throw new NotFoundException("Transaction", request.TransactionId);
 
+        // Clôturer libère les fonds vers le vendeur : seul l'acheteur peut le décider.
+        if (transaction.BuyerId != request.UserId)
+            throw new ForbiddenException("Only the buyer can close this transaction.");
+
         transaction.Transition(TransactionStatus.Closed);
         await _transactions.UpdateAsync(transaction, ct);
 

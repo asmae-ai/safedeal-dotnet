@@ -39,7 +39,7 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
         t.Id,
         t.SecureToken,
         t.Title,
-        t.Amount.Amount.ToString("F2"),
+        t.Amount.Amount.ToApiString(),
         t.Amount.Currency,
         t.Status.ToString().ToSnakeCase(),
         t.TrackingNumber,
