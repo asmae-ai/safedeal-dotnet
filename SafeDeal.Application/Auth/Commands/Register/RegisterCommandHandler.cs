@@ -45,7 +45,9 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
         var code = await _otpService.GenerateAndStoreAsync($"email_verify:{user.Id}", ct);
         await _emailService.SendVerificationCodeAsync(user.Email, user.Name, code, ct);
 
-        var token = _tokenService.GenerateAccessToken(user);
-        return new AuthResponseDto(token, UserDto.From(user));
+        return new AuthResponseDto(
+            _tokenService.GenerateAccessToken(user),
+            UserDto.From(user),
+            RefreshToken: await _tokenService.IssueRefreshTokenAsync(user.Id, ct));
     }
 }

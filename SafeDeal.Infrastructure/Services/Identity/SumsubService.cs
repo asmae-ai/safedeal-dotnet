@@ -42,12 +42,22 @@ public class SumsubService : IIdentityVerificationService
         return json.RootElement.GetProperty("id").GetString()!;
     }
 
-    public async Task<bool> ValidateWebhookAsync(string payload, string signature, CancellationToken ct = default)
+    public Task<bool> ValidateWebhookAsync(string payload, string signature, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(signature)) return Task.FromResult(false);
+
         var secret = _config["Sumsub:WebhookSecret"]!;
         var hash = HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(payload));
-        var computed = Convert.ToHexString(hash).ToLower();
-        return computed == signature;
+        var computed = Convert.ToHexString(hash);
+
+        // Comparaison a temps constant : une comparaison de chaines classique
+        // laisse fuir la position du premier octet errone.
+        var provided = signature.Trim();
+        if (provided.Length != computed.Length) return Task.FromResult(false);
+
+        return Task.FromResult(CryptographicOperations.FixedTimeEquals(
+            Encoding.ASCII.GetBytes(computed.ToUpperInvariant()),
+            Encoding.ASCII.GetBytes(provided.ToUpperInvariant())));
     }
 
     public async Task<string> GetApplicantStatusAsync(string applicantId, CancellationToken ct = default)

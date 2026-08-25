@@ -48,6 +48,9 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             return new AuthResponseDto(null, null, RequiresTwoFactor: true);
         }
 
-        return new AuthResponseDto(_tokenService.GenerateAccessToken(user), UserDto.From(user));
+        return new AuthResponseDto(
+            _tokenService.GenerateAccessToken(user),
+            UserDto.From(user),
+            RefreshToken: await _tokenService.IssueRefreshTokenAsync(user.Id, ct));
     }
 }

@@ -34,6 +34,9 @@ public class VerifyTwoFactorCommandHandler : IRequestHandler<VerifyTwoFactorComm
         // Un code ne sert qu'une fois : il est invalidé dès qu'il a servi.
         await _otpService.InvalidateAsync($"2fa:{user.Id}", ct);
 
-        return new AuthResponseDto(_tokenService.GenerateAccessToken(user), UserDto.From(user));
+        return new AuthResponseDto(
+            _tokenService.GenerateAccessToken(user),
+            UserDto.From(user),
+            RefreshToken: await _tokenService.IssueRefreshTokenAsync(user.Id, ct));
     }
 }

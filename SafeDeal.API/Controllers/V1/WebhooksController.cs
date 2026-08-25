@@ -7,6 +7,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using MediatR;
 using SafeDeal.Application.Transactions.Commands.PayTransaction;
+using System.Text.Json;
+using SafeDeal.Application.Identity.Commands.SyncVerification;
+using SafeDeal.Domain.Interfaces.Services;
 using Stripe;
 
 namespace SafeDeal.API.Controllers.V1
@@ -72,5 +75,53 @@ namespace SafeDeal.API.Controllers.V1
 
             return Ok(new { message = "Webhook handled." });
         }
+
+        /// <summary>
+        /// Decision de verification d'identite emise par Sumsub. Sans cet endpoint,
+        /// le dossier cree a la soumission n'etait jamais relu et chaque decision
+        /// devait etre ressaisie a la main dans l'ecran admin.
+        /// </summary>
+        [HttpPost("sumsub")]
+        public async Task<IActionResult> Sumsub(
+            [FromServices] IIdentityVerificationService identityService,
+            CancellationToken ct)
+        {
+            var payload = await new StreamReader(Request.Body).ReadToEndAsync(ct);
+            var digest = Request.Headers["X-Payload-Digest"].ToString();
+
+            if (!await identityService.ValidateWebhookAsync(payload, digest, ct))
+            {
+                _logger.LogWarning("Rejected Sumsub webhook: invalid digest.");
+                return BadRequest(new { message = "Invalid signature." });
+            }
+
+            SumsubEvent? evt;
+            try
+            {
+                evt = JsonSerializer.Deserialize<SumsubEvent>(payload,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "Malformed Sumsub webhook payload.");
+                return BadRequest(new { message = "Malformed payload." });
+            }
+
+            // Seule la revue finale porte une decision ; les autres evenements du
+            // cycle sont acquittes sans effet.
+            if (evt?.ReviewResult?.ReviewAnswer is null || evt.ApplicantId is null)
+                return Ok(new { message = "Ignored: no decision in this event." });
+
+            await _mediator.Send(new SyncVerificationCommand(
+                evt.ApplicantId,
+                evt.ExternalUserId,
+                evt.ReviewResult.ReviewAnswer,
+                evt.ReviewResult.ModerationComment), ct);
+
+            return Ok(new { message = "Webhook handled." });
+        }
     }
+
+    public record SumsubReviewResult(string? ReviewAnswer, string? ModerationComment);
+    public record SumsubEvent(string? ApplicantId, string? ExternalUserId, string? Type, SumsubReviewResult? ReviewResult);
 }

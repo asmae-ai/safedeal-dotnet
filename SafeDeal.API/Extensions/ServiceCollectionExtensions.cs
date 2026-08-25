@@ -62,32 +62,24 @@ public static class ServiceCollectionExtensions
             // Une limite atteinte est un 429, ce que l'écran de connexion sait présenter.
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-            options.AddPolicy("login", context =>
-                RateLimitPartition.GetFixedWindowLimiter(
-                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                    _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = 5,
-                        Window = TimeSpan.FromMinutes(1)
-                    }));
+            // Les seuils restent des valeurs de production, mais deviennent
+            // ajustables par configuration plutot que codes en dur.
+            void AddIpPolicy(string name, int defaultLimit)
+            {
+                var limit = configuration.GetValue<int?>($"RateLimiting:{name}") ?? defaultLimit;
+                options.AddPolicy(name, context =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                        _ => new FixedWindowRateLimiterOptions
+                        {
+                            PermitLimit = limit,
+                            Window = TimeSpan.FromMinutes(1)
+                        }));
+            }
 
-            options.AddPolicy("register", context =>
-                RateLimitPartition.GetFixedWindowLimiter(
-                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                    _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = 10,
-                        Window = TimeSpan.FromMinutes(1)
-                    }));
-
-            options.AddPolicy("otp", context =>
-                RateLimitPartition.GetFixedWindowLimiter(
-                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-                    _ => new FixedWindowRateLimiterOptions
-                    {
-                        PermitLimit = 3,
-                        Window = TimeSpan.FromMinutes(1)
-                    }));
+            AddIpPolicy("login", 5);
+            AddIpPolicy("register", 10);
+            AddIpPolicy("otp", 3);
         });
 
         // CORS

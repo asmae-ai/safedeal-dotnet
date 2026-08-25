@@ -6,6 +6,7 @@ using SafeDeal.Application.Auth.Commands.ChangePassword;
 using SafeDeal.Application.Auth.Commands.ForgotPassword;
 using SafeDeal.Application.Auth.Commands.Login;
 using SafeDeal.Application.Auth.Commands.Logout;
+using SafeDeal.Application.Auth.Commands.RefreshToken;
 using SafeDeal.Application.Auth.Commands.Register;
 using SafeDeal.Application.Auth.Commands.ResendVerification;
 using SafeDeal.Application.Auth.Commands.SendTwoFactor;
@@ -58,6 +59,14 @@ public class AuthController : ControllerBase
     {
         await _mediator.Send(new LogoutCommand(Token), ct);
         return Ok(new { message = "Logged out successfully." });
+    }
+
+    // Sans jeton d'acces : c'est precisement quand il a expire qu'on appelle ici.
+    [HttpPost("auth/refresh")]
+    public async Task<IActionResult> Refresh([FromBody] RefreshTokenCommand command, CancellationToken ct)
+    {
+        var result = await _mediator.Send(command, ct);
+        return Ok(result);
     }
 
     [HttpGet("me")]
