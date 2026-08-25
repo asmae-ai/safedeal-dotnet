@@ -38,6 +38,10 @@ public static class ServiceCollectionExtensions
 
         services.AddAuthorization();
 
+        // Paramètres commerciaux (taux de commission, devise de référence).
+        services.Configure<SafeDeal.Application.Common.Options.PlatformOptions>(
+            configuration.GetSection(SafeDeal.Application.Common.Options.PlatformOptions.SectionName));
+
         // MediatR + Behaviors
         services.AddMediatR(cfg =>
         {
@@ -54,6 +58,10 @@ public static class ServiceCollectionExtensions
         // Rate Limiting
         services.AddRateLimiter(options =>
         {
+            // Par défaut ASP.NET renvoie 503, que le frontend interprète comme une panne.
+            // Une limite atteinte est un 429, ce que l'écran de connexion sait présenter.
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
             options.AddPolicy("login", context =>
                 RateLimitPartition.GetFixedWindowLimiter(
                     context.Connection.RemoteIpAddress?.ToString() ?? "unknown",

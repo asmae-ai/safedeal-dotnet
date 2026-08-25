@@ -1,10 +1,13 @@
 using MediatR;
+using Microsoft.Extensions.Logging;
 using SafeDeal.Application.Common.Exceptions;
 using SafeDeal.Application.Transactions.Commands.CreateTransaction;
 using SafeDeal.Application.Transactions.DTOs;
 using SafeDeal.Domain.Enums;
 using SafeDeal.Domain.Events;
+using SafeDeal.Domain.Exceptions;
 using SafeDeal.Domain.Interfaces.Repositories;
+using SafeDeal.Domain.Interfaces.Services;
 
 namespace SafeDeal.Application.Transactions.Commands.CancelTransaction;
 
@@ -12,13 +15,22 @@ public class CancelTransactionCommandHandler : IRequestHandler<CancelTransaction
 {
     private readonly ITransactionRepository _transactions;
     private readonly IUserRepository _users;
+    private readonly IPaymentService _payments;
     private readonly IPublisher _publisher;
+    private readonly ILogger<CancelTransactionCommandHandler> _logger;
 
-    public CancelTransactionCommandHandler(ITransactionRepository transactions, IUserRepository users, IPublisher publisher)
+    public CancelTransactionCommandHandler(
+        ITransactionRepository transactions,
+        IUserRepository users,
+        IPaymentService payments,
+        IPublisher publisher,
+        ILogger<CancelTransactionCommandHandler> logger)
     {
         _transactions = transactions;
         _users = users;
+        _payments = payments;
         _publisher = publisher;
+        _logger = logger;
     }
 
     public async Task<TransactionDto> Handle(CancelTransactionCommand request, CancellationToken ct)
@@ -29,7 +41,29 @@ public class CancelTransactionCommandHandler : IRequestHandler<CancelTransaction
         if (transaction.VendorId != request.UserId && transaction.BuyerId != request.UserId)
             throw new ForbiddenException("Only the vendor or the buyer can cancel this transaction.");
 
-        transaction.Transition(TransactionStatus.Cancelled);
+        // Annuler une transaction déjà encaissée doit rendre l'argent : sans cela,
+        // les fonds resteraient captés alors que la commande n'existe plus.
+        // Le remboursement passe avant l'écriture du statut, pour ne jamais afficher
+        // une annulation dont l'argent n'est pas revenu.
+        var mustRefund = !string.IsNullOrEmpty(transaction.StripePaymentIntentId)
+                         && transaction.Status != TransactionStatus.PendingPayment;
+
+        if (mustRefund)
+        {
+            try
+            {
+                await _payments.RefundAsync(transaction.StripePaymentIntentId!, ct);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Stripe refund failed while cancelling transaction {TransactionId}.", transaction.Id);
+                throw new BusinessRuleException(
+                    "The refund was refused by the payment provider. The transaction was not cancelled.");
+            }
+        }
+
+        transaction.Transition(TransactionStatus.Cancelled,
+            mustRefund ? "Cancelled after payment; buyer refunded." : null);
         await _transactions.UpdateAsync(transaction, ct);
 
         await _publisher.Publish(new TransactionStatusChangedEvent(transaction.Id, TransactionStatus.Cancelled), ct);
