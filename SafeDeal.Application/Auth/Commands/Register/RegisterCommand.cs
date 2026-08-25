@@ -8,4 +8,5 @@ public record RegisterCommand(
     string Email,
     string Password,
     string PasswordConfirmation,
-    string Role) : IRequest<AuthResponseDto>;
+    string Role,
+    string? Phone = null) : IRequest<AuthResponseDto>;

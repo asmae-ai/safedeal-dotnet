@@ -16,6 +16,8 @@ public class User : BaseEntity, IAuditableEntity
     public IdentityStatus IdentityStatus { get; private set; } = IdentityStatus.NotSubmitted;
     public decimal ReputationScore { get; private set; } = 0;
     public bool IsActive { get; private set; } = true;
+    /// <summary>Quand elle est active, la connexion exige un code envoyé par e-mail.</summary>
+    public bool TwoFactorEnabled { get; private set; }
 
     private User() { }
 
@@ -59,6 +61,26 @@ public class User : BaseEntity, IAuditableEntity
     public void Deactivate()
     {
         IsActive = false;
+        UpdateTimestamp();
+    }
+
+    public void SetTwoFactor(bool enabled)
+    {
+        TwoFactorEnabled = enabled;
+        UpdateTimestamp();
+    }
+
+    /// <summary>Récompense une transaction menée à son terme, plafonnée à 5.</summary>
+    public void RegisterSuccessfulTransaction()
+    {
+        ReputationScore = Math.Min(5m, Math.Round(ReputationScore + 0.1m, 2));
+        UpdateTimestamp();
+    }
+
+    /// <summary>Pénalise un litige tranché contre l'utilisateur, plancher à 0.</summary>
+    public void RegisterFailedTransaction()
+    {
+        ReputationScore = Math.Max(0m, Math.Round(ReputationScore - 0.3m, 2));
         UpdateTimestamp();
     }
 

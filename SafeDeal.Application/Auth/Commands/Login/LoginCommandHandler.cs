@@ -1,5 +1,4 @@
 using MediatR;
-using SafeDeal.Application.Common.Extensions;
 using SafeDeal.Application.Auth.DTOs;
 using SafeDeal.Application.Common.Exceptions;
 using SafeDeal.Domain.Interfaces.Repositories;
@@ -11,11 +10,19 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
 {
     private readonly IUserRepository _users;
     private readonly ITokenService _tokenService;
+    private readonly IOtpService _otpService;
+    private readonly IEmailService _emailService;
 
-    public LoginCommandHandler(IUserRepository users, ITokenService tokenService)
+    public LoginCommandHandler(
+        IUserRepository users,
+        ITokenService tokenService,
+        IOtpService otpService,
+        IEmailService emailService)
     {
         _users = users;
         _tokenService = tokenService;
+        _otpService = otpService;
+        _emailService = emailService;
     }
 
     public async Task<AuthResponseDto> Handle(LoginCommand request, CancellationToken ct)
@@ -23,23 +30,24 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
         var user = await _users.GetByEmailAsync(request.Email, ct)
             ?? throw new UnauthorizedException("Invalid credentials.");
 
-        if (!user.IsEmailVerified)
-            throw new ForbiddenException("Please verify your email before logging in.");
-
-        if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+        // Le mot de passe est vérifié avant tout autre motif de refus : sinon la réponse
+        // révélerait l'existence d'un compte à qui ne connaît pas le mot de passe.
+        if (!user.VerifyPassword(request.Password))
             throw new UnauthorizedException("Invalid credentials.");
 
         if (!user.IsActive)
             throw new ForbiddenException("Your account has been deactivated.");
 
-        var token = _tokenService.GenerateAccessToken(user);
+        if (!user.IsEmailVerified)
+            throw new EmailNotVerifiedException();
 
-        return new AuthResponseDto(token, new UserDto(
-            user.Id, user.Name, user.Email,
-            user.Role.ToString().ToLower(),
-            user.Phone,
-            user.IdentityStatus.ToString().ToLower(),
-            user.ReputationScore.ToApiString(),
-            user.CreatedAt.ToString("o"), user.AvatarPath));
+        if (user.TwoFactorEnabled)
+        {
+            var otp = await _otpService.GenerateAndStoreAsync($"2fa:{user.Id}", ct);
+            await _emailService.SendOtpAsync(user.Email, user.Name, otp, ct);
+            return new AuthResponseDto(null, null, RequiresTwoFactor: true);
+        }
+
+        return new AuthResponseDto(_tokenService.GenerateAccessToken(user), UserDto.From(user));
     }
 }

@@ -38,7 +38,7 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
 
         var role = request.Role == "vendor" ? UserRole.Vendor : UserRole.Buyer;
         var hash = BCrypt.Net.BCrypt.HashPassword(request.Password);
-        var user = User.Create(request.Name, request.Email, hash, role);
+        var user = User.Create(request.Name, request.Email, hash, role, request.Phone);
 
         await _users.AddAsync(user, ct);
 
@@ -46,16 +46,6 @@ public class RegisterCommandHandler : IRequestHandler<RegisterCommand, AuthRespo
         await _emailService.SendVerificationCodeAsync(user.Email, user.Name, code, ct);
 
         var token = _tokenService.GenerateAccessToken(user);
-        return new AuthResponseDto(token, MapToDto(user));
+        return new AuthResponseDto(token, UserDto.From(user));
     }
-
-    private static UserDto MapToDto(User user) => new(
-        user.Id,
-        user.Name,
-        user.Email,
-        user.Role.ToString().ToLower(),
-        user.Phone,
-        user.IdentityStatus.ToString().ToLower(),
-        user.ReputationScore.ToApiString(),
-        user.CreatedAt.ToString("o"), user.AvatarPath);
 }

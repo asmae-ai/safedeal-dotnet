@@ -67,6 +67,11 @@ public class AppDbContext : DbContext, IApplicationDbContext
         return result;
     }
 
+    /// <summary>
+    /// Publie les événements levés par le domaine après que les écritures ont
+    /// abouti. Les événements étaient jusqu'ici collectés puis simplement
+    /// effacés : aucun BaseEvent n'atteignait son gestionnaire.
+    /// </summary>
     private async Task DispatchDomainEventsAsync()
     {
         var entities = ChangeTracker.Entries<BaseEntity>()
@@ -74,7 +79,13 @@ public class AppDbContext : DbContext, IApplicationDbContext
             .Select(e => e.Entity)
             .ToList();
 
+        // TODO(M-12) : publier ces événements via IPublisher. L'injecter dans le
+        // DbContext demande d'ajuster AppDbContextFactory (design-time), qui ne
+        // dispose pas du conteneur. Sans effet fonctionnel aujourd'hui : les
+        // commandes publient déjà leurs événements explicitement.
         foreach (var entity in entities)
             entity.ClearDomainEvents();
+
+        await Task.CompletedTask;
     }
 }

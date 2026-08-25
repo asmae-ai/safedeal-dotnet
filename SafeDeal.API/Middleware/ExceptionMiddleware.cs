@@ -54,6 +54,13 @@ public class ExceptionMiddleware
                 response = new { message = ex.Message };
                 break;
 
+            // Le drapeau permet au client de rediriger vers l'ecran de verification
+            // plutot que d'afficher une erreur generique.
+            case EmailNotVerifiedException ex:
+                statusCode = 403;
+                response = new { message = ex.Message, email_verified = false };
+                break;
+
             case UnauthorizedDomainException ex:
                 statusCode = 403;
                 response = new { message = ex.Message };

@@ -1,5 +1,6 @@
 using MediatR;
 using SafeDeal.Domain.Entities;
+using SafeDeal.Domain.Enums;
 using SafeDeal.Domain.Events;
 using SafeDeal.Domain.Interfaces.Repositories;
 
@@ -36,10 +37,12 @@ public class DisputeOpenedNotificationHandler : INotificationHandler<DisputeOpen
 
         if (author.HasValue)
             await _notifications.AddAsync(Notification.Create(author.Value,
-                $"Votre litige sur « {transaction.Title} » a bien été enregistré. Les fonds restent bloqués jusqu'à la décision."), ct);
+                $"Votre litige sur « {transaction.Title} » a bien été enregistré. Les fonds restent bloqués jusqu'à la décision.",
+                NotificationType.Dispute, transaction.Id), ct);
 
         if (counterparty.HasValue)
             await _notifications.AddAsync(Notification.Create(counterparty.Value,
-                $"Un litige a été ouvert sur la transaction « {transaction.Title} ». Répondez pour faire valoir votre version."), ct);
+                $"Un litige a été ouvert sur la transaction « {transaction.Title} ». Répondez pour faire valoir votre version.",
+                NotificationType.Dispute, transaction.Id), ct);
     }
 }

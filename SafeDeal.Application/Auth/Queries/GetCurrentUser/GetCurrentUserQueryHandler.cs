@@ -1,5 +1,4 @@
 using MediatR;
-using SafeDeal.Application.Common.Extensions;
 using SafeDeal.Application.Auth.DTOs;
 using SafeDeal.Application.Common.Exceptions;
 using SafeDeal.Domain.Interfaces.Repositories;
@@ -16,13 +15,6 @@ public class GetCurrentUserQueryHandler : IRequestHandler<GetCurrentUserQuery, U
         var user = await _users.GetByIdAsync(request.UserId, ct)
             ?? throw new NotFoundException("User", request.UserId);
 
-        return new UserDto(
-            user.Id, user.Name, user.Email,
-            user.Role.ToString().ToLower(),
-            user.Phone,
-            user.IdentityStatus.ToString().ToLower(),
-            user.ReputationScore.ToApiString(),
-            user.CreatedAt.ToString("o"),
-            user.AvatarPath);
+        return UserDto.From(user);
     }
 }

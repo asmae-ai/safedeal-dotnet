@@ -17,6 +17,11 @@ public class GetNotificationsQueryHandler : IRequestHandler<GetNotificationsQuer
     {
         var notifications = await _notifications.GetByUserIdAsync(request.UserId, ct);
         return notifications.Select(n => new NotificationDto(
-            n.Id, n.Message, n.IsRead, n.CreatedAt)).ToList();
+            n.Id,
+            n.Message,
+            n.Type.ToString().ToLower(),
+            n.TransactionId,
+            n.IsRead,
+            n.CreatedAt.ToString("o"))).ToList();
     }
 }

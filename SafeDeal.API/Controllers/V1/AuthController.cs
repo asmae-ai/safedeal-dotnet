@@ -9,6 +9,7 @@ using SafeDeal.Application.Auth.Commands.Logout;
 using SafeDeal.Application.Auth.Commands.Register;
 using SafeDeal.Application.Auth.Commands.ResendVerification;
 using SafeDeal.Application.Auth.Commands.SendTwoFactor;
+using SafeDeal.Application.Auth.Commands.SetTwoFactor;
 using SafeDeal.Application.Auth.Commands.UpdateProfile;
 using SafeDeal.Application.Auth.Commands.UploadAvatar;
 using SafeDeal.Application.Auth.Commands.VerifyEmail;
@@ -135,12 +136,27 @@ public class AuthController : ControllerBase
         return Ok(new { message = "OTP sent." });
     }
 
+    // Sans jeton : c'est la seconde etape de la connexion, l'utilisateur n'en a pas encore.
     [HttpPost("verify-2fa")]
-    [Authorize]
-    public async Task<IActionResult> VerifyTwoFactor([FromBody] VerifyOtpRequest request, CancellationToken ct)
+    [EnableRateLimiting("login")]
+    public async Task<IActionResult> VerifyTwoFactor([FromBody] VerifyTwoFactorCommand command, CancellationToken ct)
     {
-        await _mediator.Send(new VerifyTwoFactorCommand(UserId, request.Code), ct);
-        return Ok(new { message = "2FA verified." });
+        var result = await _mediator.Send(command, ct);
+        return Ok(result);
+    }
+
+    [HttpPost("me/two-factor")]
+    [Authorize]
+    public async Task<IActionResult> SetTwoFactor([FromBody] SetTwoFactorRequest request, CancellationToken ct)
+    {
+        await _mediator.Send(new SetTwoFactorCommand(UserId, request.Enabled), ct);
+        return Ok(new
+        {
+            message = request.Enabled
+                ? "Two-factor authentication enabled."
+                : "Two-factor authentication disabled.",
+            enabled = request.Enabled
+        });
     }
 
     [HttpPost("forgot-password")]
@@ -159,7 +175,7 @@ public class AuthController : ControllerBase
 }
 
 public record VerifyEmailRequest(string Code);
-public record VerifyOtpRequest(string Code);
+public record SetTwoFactorRequest(bool Enabled);
 public record UpdateProfileRequest(string? Name, string? Phone);
 public record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 

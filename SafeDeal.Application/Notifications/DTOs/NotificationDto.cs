@@ -1,3 +1,9 @@
 namespace SafeDeal.Application.Notifications.DTOs;
 
-public record NotificationDto(int Id, string Message, bool IsRead, DateTime CreatedAt);
+public record NotificationDto(
+    int Id,
+    string Message,
+    string Type,
+    int? TransactionId,
+    bool IsRead,
+    string CreatedAt);
