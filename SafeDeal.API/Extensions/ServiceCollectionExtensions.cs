@@ -18,7 +18,17 @@ public static class ServiceCollectionExtensions
     {
         services.AddControllers();
         services.AddEndpointsApiExplorer();
-        services.AddOpenApi();
+        services.AddOpenApi(options =>
+        {
+            options.AddDocumentTransformer<SafeDeal.API.OpenApi.SafeDealDocumentTransformer>();
+            options.AddOperationTransformer<SafeDeal.API.OpenApi.SecurityOperationTransformer>();
+        });
+
+        // Compression des reponses JSON (Brotli, puis gzip en repli).
+        services.AddSafeDealCompression(configuration);
+
+        // Sondes d'etat (API, PostgreSQL, Redis).
+        services.AddSafeDealHealthChecks(configuration);
 
         // JWT Authentication
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -43,6 +53,10 @@ public static class ServiceCollectionExtensions
         services.Configure<SafeDeal.Application.Common.Options.PlatformOptions>(
             configuration.GetSection(SafeDeal.Application.Common.Options.PlatformOptions.SectionName));
 
+        // Durées de vie du cache de lecture (section Cache).
+        services.Configure<SafeDeal.Application.Common.Options.CacheOptions>(
+            configuration.GetSection(SafeDeal.Application.Common.Options.CacheOptions.SectionName));
+
         // MediatR + Behaviors
         services.AddMediatR(cfg =>
         {
@@ -53,6 +67,9 @@ public static class ServiceCollectionExtensions
             // Apres la validation : une commande rejetee en amont n'est pas une
             // action metier, seules les tentatives reellement traitees sont tracees.
             cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(AuditBehavior<,>));
+            // En dernier, au plus pres du handler : une reponse servie depuis le
+            // cache reste ainsi validee, journalisee et auditee comme les autres.
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(CachingBehavior<,>));
         });
 
         // FluentValidation

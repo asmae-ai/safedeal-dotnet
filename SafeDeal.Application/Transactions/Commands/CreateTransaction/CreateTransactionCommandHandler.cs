@@ -1,4 +1,5 @@
 using MediatR;
+using SafeDeal.Application.Common.Caching;
 using SafeDeal.Application.Common.Exceptions;
 using SafeDeal.Application.Transactions.DTOs;
 using SafeDeal.Domain.Entities;
@@ -11,11 +12,16 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
 {
     private readonly ITransactionRepository _transactions;
     private readonly IUserRepository _users;
+    private readonly ICacheService _cache;
 
-    public CreateTransactionCommandHandler(ITransactionRepository transactions, IUserRepository users)
+    public CreateTransactionCommandHandler(
+        ITransactionRepository transactions,
+        IUserRepository users,
+        ICacheService cache)
     {
         _transactions = transactions;
         _users = users;
+        _cache = cache;
     }
 
     public async Task<TransactionDto> Handle(CreateTransactionCommand request, CancellationToken ct)
@@ -31,6 +37,11 @@ public class CreateTransactionCommandHandler : IRequestHandler<CreateTransaction
 
         var transaction = Transaction.Create(request.Title, request.Amount, request.Currency, request.VendorId);
         await _transactions.AddAsync(transaction, ct);
+
+        // Une creation n'emet pas de changement de statut : sans cette
+        // invalidation, le vendeur ne verrait sa transaction qu'a l'expiration.
+        await _cache.InvalidateAsync(CacheScopes.User(request.VendorId), ct);
+        await _cache.InvalidateAsync(CacheScopes.Admin, ct);
 
         return MapToDto(transaction, vendor, null);
     }

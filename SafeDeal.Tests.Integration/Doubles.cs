@@ -57,12 +57,23 @@ public class FakeEmailService : IEmailService
 
 public class FakeIdentityVerificationService : IIdentityVerificationService
 {
+    /// <summary>Permet de simuler un condense de charge utile invalide.</summary>
+    public bool SignatureIsValid { get; set; } = true;
+
+    /// <summary>Etat renvoye par le prestataire lorsqu'on l'interroge.</summary>
+    public string ApplicantStatus { get; set; } = "pending";
+
+    public List<int> Applicants { get; } = [];
+
     public Task<string> CreateApplicantAsync(int userId, string email, CancellationToken ct = default)
-        => Task.FromResult($"applicant_{userId}");
+    {
+        Applicants.Add(userId);
+        return Task.FromResult($"applicant_{userId}");
+    }
 
     public Task<bool> ValidateWebhookAsync(string payload, string signature, CancellationToken ct = default)
-        => Task.FromResult(true);
+        => Task.FromResult(SignatureIsValid);
 
     public Task<string> GetApplicantStatusAsync(string applicantId, CancellationToken ct = default)
-        => Task.FromResult("pending");
+        => Task.FromResult(ApplicantStatus);
 }

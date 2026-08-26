@@ -1,4 +1,5 @@
 using MediatR;
+using SafeDeal.Application.Common.Caching;
 using SafeDeal.Application.Common.Exceptions;
 using SafeDeal.Domain.Interfaces.Repositories;
 
@@ -8,13 +9,16 @@ public class RejectIdentityCommandHandler : IRequestHandler<RejectIdentityComman
 {
     private readonly IIdentityVerificationRepository _verifications;
     private readonly IUserRepository _users;
+    private readonly ICacheService _cache;
 
     public RejectIdentityCommandHandler(
         IIdentityVerificationRepository verifications,
-        IUserRepository users)
+        IUserRepository users,
+        ICacheService cache)
     {
         _verifications = verifications;
         _users = users;
+        _cache = cache;
     }
 
     public async Task Handle(RejectIdentityCommand request, CancellationToken ct)
@@ -30,5 +34,10 @@ public class RejectIdentityCommandHandler : IRequestHandler<RejectIdentityComman
 
         await _verifications.UpdateAsync(verification, ct);
         await _users.UpdateAsync(user, ct);
+
+        // La file d'attente des verifications et le statut vu par l'interesse
+        // changent tous deux : les deux portees sont perimees.
+        await _cache.InvalidateAsync(CacheScopes.User(request.UserId), ct);
+        await _cache.InvalidateAsync(CacheScopes.Admin, ct);
     }
 }

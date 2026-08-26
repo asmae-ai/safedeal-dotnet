@@ -17,6 +17,10 @@ app.Use(async (context, next) =>
     await next();
 });
 
+// Avant tout ce qui ecrit une reponse — erreurs et fichiers statiques compris :
+// un middleware place plus bas ne pourrait plus compresser ce qui est deja parti.
+app.UseResponseCompression();
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -31,6 +35,18 @@ if (app.Environment.IsDevelopment())
     {
         options.Title = "SafeDeal API";
         options.Theme = ScalarTheme.Purple;
+
+        // Le jeton se saisit une fois et vaut pour tous les essais : sans cela,
+        // essayer un endpoint protege depuis la documentation demande de coller
+        // un « Bearer » a la main a chaque appel.
+        options.AddPreferredSecuritySchemes("Bearer");
+
+        // Les exemples proposes correspondent a ce que le frontend utilise.
+        options.WithDefaultHttpClient(ScalarTarget.JavaScript, ScalarClient.Fetch);
+
+        // Les groupes s'ouvrent un a un : huit domaines deplies d'emblee
+        // noieraient la barre laterale.
+        options.WithDefaultOpenAllTags(false);
     });
 }
 
@@ -51,6 +67,7 @@ app.UseStaticFiles(new StaticFileOptions
 });
 
 app.UseApiMiddlewares();
+app.MapSafeDealHealthChecks();
 app.MapControllers();
 app.Run();
 

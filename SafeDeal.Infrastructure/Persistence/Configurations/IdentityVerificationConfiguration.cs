@@ -19,5 +19,12 @@ public class IdentityVerificationConfiguration : IEntityTypeConfiguration<Identi
             .WithMany()
             .HasForeignKey(v => v.UserId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // File des dossiers a examiner : filtre sur le statut, tri par anciennete.
+        builder.HasIndex(v => new { v.Status, v.CreatedAt });
+        builder.HasIndex(v => v.UserId);
+
+        // Le webhook du prestataire retrouve le dossier par cet identifiant.
+        builder.HasIndex(v => v.SumsubApplicantId);
     }
 }

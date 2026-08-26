@@ -30,6 +30,17 @@ namespace SafeDeal.API.Controllers.V1
             _logger = logger;
         }
 
+        /// <summary>Notification d'encaissement emise par Stripe.</summary>
+        /// <remarks>
+        /// Authentifie par la signature `Stripe-Signature`, pas par un jeton :
+        /// l'appelant est Stripe, pas un utilisateur.
+        ///
+        /// Un rejeu sur une transaction deja payee est acquitte sans effet :
+        /// Stripe reemet jusqu'a obtenir un 2xx. Un corps illisible sort en 400
+        /// et non en 500, car aucun rejeu ne le rendra valide.
+        /// </remarks>
+        /// <response code="200">Evenement traite, ou ignore faute de reference exploitable.</response>
+        /// <response code="400">Signature invalide ou charge utile malformee.</response>
         [HttpPost("stripe")]
         [EnableRateLimiting("webhooks")]
         public async Task<IActionResult> Stripe(CancellationToken ct)
@@ -78,11 +89,15 @@ namespace SafeDeal.API.Controllers.V1
             return Ok(new { message = "Webhook handled." });
         }
 
-        /// <summary>
-        /// Decision de verification d'identite emise par Sumsub. Sans cet endpoint,
-        /// le dossier cree a la soumission n'etait jamais relu et chaque decision
-        /// devait etre ressaisie a la main dans l'ecran admin.
-        /// </summary>
+        /// <summary>Decision de verification d'identite emise par Sumsub.</summary>
+        /// <remarks>
+        /// Authentifie par le condense `X-Payload-Digest`. Seule la revue finale
+        /// porte une decision (`GREEN` ou `RED`) ; les autres evenements du cycle
+        /// sont acquittes sans effet, comme les rejeux d'une decision deja
+        /// appliquee.
+        /// </remarks>
+        /// <response code="200">Decision appliquee, ou evenement sans decision acquitte.</response>
+        /// <response code="400">Condense invalide ou charge utile malformee.</response>
         [HttpPost("sumsub")]
         [EnableRateLimiting("webhooks")]
         public async Task<IActionResult> Sumsub(

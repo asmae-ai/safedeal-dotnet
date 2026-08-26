@@ -39,5 +39,13 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
         builder.HasOne(t => t.Dispute)
             .WithOne(d => d.Transaction)
             .HasForeignKey<Dispute>(d => d.TransactionId);
+
+        // Toutes les listes trient par date decroissante et filtrent par partie
+        // ou par statut. Sans ces index, chaque page d'une liste balayait la
+        // table entiere avant d'en jeter tout sauf vingt lignes.
+        builder.HasIndex(t => t.CreatedAt);
+        builder.HasIndex(t => new { t.VendorId, t.CreatedAt });
+        builder.HasIndex(t => new { t.BuyerId, t.CreatedAt });
+        builder.HasIndex(t => t.Status);
     }
 }

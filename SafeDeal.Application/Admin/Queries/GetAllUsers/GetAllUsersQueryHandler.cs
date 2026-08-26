@@ -32,7 +32,7 @@ public class GetAllUsersQueryHandler : IRequestHandler<GetAllUsersQuery, PagedRe
         }
 
         var total = await query.CountAsync(ct);
-        var lastPage = total == 0 ? 1 : (int)Math.Ceiling(total / (double)request.SafePageSize);
+        var lastPage = Paging.LastPage(total, request.SafePageSize);
 
         var items = await query
             .OrderByDescending(u => u.CreatedAt)

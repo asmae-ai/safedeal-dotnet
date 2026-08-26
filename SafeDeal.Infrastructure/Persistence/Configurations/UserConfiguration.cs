@@ -17,5 +17,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.Role).HasConversion<string>();
         builder.Property(u => u.IdentityStatus).HasConversion<string>();
         builder.Property(u => u.ReputationScore).HasPrecision(5, 2);
+
+        // Liste d'administration : tri par date d'inscription, filtre par role.
+        builder.HasIndex(u => u.CreatedAt);
+        builder.HasIndex(u => u.Role);
     }
 }

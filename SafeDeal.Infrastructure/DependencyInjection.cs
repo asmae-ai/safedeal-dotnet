@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SafeDeal.Application.Common.Audit;
+using SafeDeal.Application.Common.Caching;
 using SafeDeal.Application.Common.Interfaces;
 using SafeDeal.Domain.Interfaces.Repositories;
 using SafeDeal.Domain.Interfaces.Services;
@@ -33,7 +34,12 @@ public static class DependencyInjection
         // Redis
         services.AddSingleton<IConnectionMultiplexer>(
             ConnectionMultiplexer.Connect(configuration.GetConnectionString("Redis")!));
-        services.AddSingleton<IRedisCacheService, RedisCacheService>();
+
+        // Une seule instance sert les deux contrats : l'acces brut (OTP, jetons
+        // revoques) et le cache applicatif typé, sur la meme connexion.
+        services.AddSingleton<RedisCacheService>();
+        services.AddSingleton<IRedisCacheService>(sp => sp.GetRequiredService<RedisCacheService>());
+        services.AddSingleton<ICacheService>(sp => sp.GetRequiredService<RedisCacheService>());
 
         // Repositories
         services.AddScoped<IUserRepository, UserRepository>();

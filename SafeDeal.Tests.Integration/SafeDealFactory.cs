@@ -31,6 +31,7 @@ public class SafeDealFactory : WebApplicationFactory<Program>, IAsyncLifetime
 
     public FakePaymentService Payments { get; } = new();
     public FakeEmailService Emails { get; } = new();
+    public FakeIdentityVerificationService Identity { get; } = new();
 
     public async Task InitializeAsync()
     {
@@ -77,7 +78,7 @@ public class SafeDealFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.RemoveAll<IEmailService>();
             services.AddSingleton<IEmailService>(Emails);
             services.RemoveAll<IIdentityVerificationService>();
-            services.AddSingleton<IIdentityVerificationService>(new FakeIdentityVerificationService());
+            services.AddSingleton<IIdentityVerificationService>(Identity);
         });
     }
 

@@ -1,10 +1,11 @@
 using MediatR;
+using SafeDeal.Application.Common.Models;
 using SafeDeal.Application.Notifications.DTOs;
 using SafeDeal.Domain.Interfaces.Repositories;
 
 namespace SafeDeal.Application.Notifications.Queries.GetNotifications;
 
-public class GetNotificationsQueryHandler : IRequestHandler<GetNotificationsQuery, List<NotificationDto>>
+public class GetNotificationsQueryHandler : IRequestHandler<GetNotificationsQuery, PagedResult<NotificationDto>>
 {
     private readonly INotificationRepository _notifications;
 
@@ -13,15 +14,22 @@ public class GetNotificationsQueryHandler : IRequestHandler<GetNotificationsQuer
         _notifications = notifications;
     }
 
-    public async Task<List<NotificationDto>> Handle(GetNotificationsQuery request, CancellationToken ct)
+    public async Task<PagedResult<NotificationDto>> Handle(GetNotificationsQuery request, CancellationToken ct)
     {
-        var notifications = await _notifications.GetByUserIdAsync(request.UserId, ct);
-        return notifications.Select(n => new NotificationDto(
+        var (notifications, total) = await _notifications.GetByUserIdAsync(
+            request.UserId,
+            request.IsPaginated() ? request.SafePage() : null,
+            request.SafePageSize(),
+            ct);
+
+        var dtos = notifications.Select(n => new NotificationDto(
             n.Id,
             n.Message,
             n.Type.ToString().ToLower(),
             n.TransactionId,
             n.IsRead,
             n.CreatedAt.ToString("o"))).ToList();
+
+        return dtos.ToResult(request, total);
     }
 }

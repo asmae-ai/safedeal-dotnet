@@ -13,6 +13,9 @@ public class NotificationConfiguration : IEntityTypeConfiguration<Notification>
         builder.Property(n => n.Type).HasConversion<string>().HasMaxLength(30);
         builder.HasIndex(n => new { n.UserId, n.ReadAt });
 
+        // La liste se rend triee par date decroissante, page par page.
+        builder.HasIndex(n => new { n.UserId, n.CreatedAt });
+
         builder.HasOne(n => n.User)
             .WithMany()
             .HasForeignKey(n => n.UserId)

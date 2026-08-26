@@ -25,6 +25,19 @@ public class IdentityController : ControllerBase
 
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
+    /// <summary>Depose un dossier de verification d'identite.</summary>
+    /// <remarks>
+    /// Reserve aux vendeurs : c'est ce dossier qui ouvre le droit de creer des
+    /// transactions. Un seul dossier peut etre en attente a la fois.
+    ///
+    /// Envoi `multipart/form-data` : `documentType` (`cin` ou `passport`),
+    /// `documentFront` et `selfie` (JPG, PNG ou PDF, 5 Mo au plus).
+    ///
+    /// Les pieces ne sont jamais servies en statique : seul un administrateur
+    /// peut les relire, par les endpoints dedies.
+    /// </remarks>
+    /// <response code="403">Le compte n'est pas un compte vendeur.</response>
+    /// <response code="422">Format ou taille de fichier refuse, ou dossier deja en attente.</response>
     [HttpPost]
     [EnableRateLimiting("mutations")]
     public async Task<IActionResult> Submit([FromForm] SubmitVerificationRequest request, CancellationToken ct)
@@ -56,6 +69,11 @@ public class IdentityController : ControllerBase
         return Ok(new { message = "Verification submitted." });
     }
 
+    /// <summary>Etat du dossier d'identite de l'utilisateur connecte.</summary>
+    /// <remarks>
+    /// Rend `{ status, submittedAt }`, ou `status` vaut `not_submitted`,
+    /// `pending`, `approved` ou `rejected`.
+    /// </remarks>
     [HttpGet("status")]
     public async Task<IActionResult> Status(CancellationToken ct)
     {

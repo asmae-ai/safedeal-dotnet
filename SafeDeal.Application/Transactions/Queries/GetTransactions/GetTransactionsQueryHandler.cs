@@ -20,7 +20,7 @@ public class GetTransactionsQueryHandler : IRequestHandler<GetTransactionsQuery,
     public async Task<PagedResult<TransactionDto>> Handle(GetTransactionsQuery request, CancellationToken ct)
     {
         var (items, total) = await _transactions.GetByUserIdAsync(request.UserId, request.SafePage, request.SafePageSize, ct);
-        var lastPage = (int)Math.Ceiling(total / (double)request.SafePageSize);
+        var lastPage = Paging.LastPage(total, request.SafePageSize);
 
         var dtos = new List<TransactionDto>();
         foreach (var t in items)

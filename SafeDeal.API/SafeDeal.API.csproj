@@ -4,6 +4,13 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Les commentaires XML des controleurs alimentent directement le document
+         OpenAPI : la documentation vit a cote du code qu'elle decrit. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1591 : chaque membre public non commente deviendrait un avertissement.
+         CS1573 : documenter le jeton d'annulation de chaque action serait du
+         bruit — seuls les parametres que l'appelant renseigne sont decrits. -->
+    <NoWarn>$(NoWarn);CS1591;CS1573</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>

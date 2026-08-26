@@ -9,11 +9,21 @@ public class NotificationRepository : INotificationRepository
     private readonly AppDbContext _context;
     public NotificationRepository(AppDbContext context) => _context = context;
 
-    public async Task<IEnumerable<Notification>> GetByUserIdAsync(int userId, CancellationToken ct = default)
-        => await _context.Notifications
+    public async Task<(IEnumerable<Notification> Items, int Total)> GetByUserIdAsync(
+        int userId, int? page, int pageSize, CancellationToken ct = default)
+    {
+        var query = _context.Notifications
             .Where(n => n.UserId == userId)
-            .OrderByDescending(n => n.CreatedAt)
-            .ToListAsync(ct);
+            .OrderByDescending(n => n.CreatedAt);
+
+        var total = await query.CountAsync(ct);
+
+        var items = page is int requested
+            ? await query.Skip((requested - 1) * pageSize).Take(pageSize).ToListAsync(ct)
+            : await query.ToListAsync(ct);
+
+        return (items, total);
+    }
 
     public async Task<Notification?> GetByIdAsync(int id, CancellationToken ct = default)
         => await _context.Notifications.FindAsync([id], ct);

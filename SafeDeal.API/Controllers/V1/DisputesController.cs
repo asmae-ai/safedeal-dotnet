@@ -32,6 +32,17 @@ public class DisputesController : ControllerBase
 
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
+    /// <summary>Ouvre un litige sur une transaction.</summary>
+    /// <remarks>
+    /// Reserve aux deux parties. L'ouverture gele la transaction : les fonds ne
+    /// peuvent plus etre liberes tant qu'un administrateur n'a pas tranche.
+    /// Une transaction ne porte qu'un seul litige.
+    ///
+    /// Envoi `multipart/form-data` : `category`, `description`, et jusqu'a
+    /// quatre fichiers `files` (JPG, PNG ou PDF, 5 Mo chacun au plus).
+    /// </remarks>
+    /// <response code="403">L'appelant n'est pas partie a la transaction.</response>
+    /// <response code="422">Litige deja ouvert, piece jointe refusee, ou transition impossible.</response>
     [HttpPost]
     [EnableRateLimiting("mutations")]
     public async Task<IActionResult> Open(int id, [FromForm] OpenDisputeRequest request, CancellationToken ct)
@@ -45,6 +56,10 @@ public class DisputesController : ControllerBase
         return Ok(new { message = "Litige ouvert avec succès.", data = result });
     }
 
+    /// <summary>Lit le litige d'une transaction, avec ses echanges.</summary>
+    /// <remarks>Reserve aux deux parties : un tiers ne voit rien du dossier.</remarks>
+    /// <response code="403">L'appelant n'est pas partie a la transaction.</response>
+    /// <response code="404">Aucun litige sur cette transaction.</response>
     [HttpGet]
     public async Task<IActionResult> Get(int id, CancellationToken ct)
     {
@@ -52,6 +67,14 @@ public class DisputesController : ControllerBase
         return Ok(new { data = result });
     }
 
+    /// <summary>Verse une reponse et ses pieces au dossier du litige.</summary>
+    /// <remarks>
+    /// Envoi `multipart/form-data` : `description` (10 caracteres au moins) et
+    /// jusqu'a quatre fichiers `files`. Un dossier deja tranche n'accepte plus
+    /// d'echange.
+    /// </remarks>
+    /// <response code="403">L'appelant n'est pas partie a la transaction.</response>
+    /// <response code="422">Description trop courte, piece refusee, ou litige deja tranche.</response>
     [HttpPost("evidence")]
     [EnableRateLimiting("mutations")]
     public async Task<IActionResult> SubmitEvidence(int id, [FromForm] EvidenceRequest request, CancellationToken ct)
@@ -63,10 +86,14 @@ public class DisputesController : ControllerBase
         return Ok(new { message = "Preuve soumise avec succès." });
     }
 
-    /// <summary>
-    /// Sert une piece jointe du litige. Le dossier uploads/disputes n'est plus
-    /// expose en statique : seules les deux parties peuvent lire les preuves.
-    /// </summary>
+    /// <summary>Sert une piece jointe du litige.</summary>
+    /// <remarks>
+    /// L'appartenance a la transaction est verifiee avant tout acces disque : le
+    /// dossier des pieces n'est pas expose en statique.
+    /// </remarks>
+    /// <param name="fileName">Nom du fichier, tel qu'il figure dans le dossier.</param>
+    /// <response code="403">L'appelant n'est pas partie a la transaction.</response>
+    /// <response code="404">Piece inconnue de ce litige, ou absente du disque.</response>
     [HttpGet("evidence/{fileName}")]
     public async Task<IActionResult> GetEvidence(int id, string fileName, CancellationToken ct)
     {

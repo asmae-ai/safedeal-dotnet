@@ -130,10 +130,14 @@ namespace SafeDeal.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedAt");
+
                     b.HasIndex("OpenedByUserId");
 
                     b.HasIndex("TransactionId")
                         .IsUnique();
+
+                    b.HasIndex("Status", "CreatedAt");
 
                     b.ToTable("Disputes");
                 });
@@ -219,7 +223,11 @@ namespace SafeDeal.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("SumsubApplicantId");
+
                     b.HasIndex("UserId");
+
+                    b.HasIndex("Status", "CreatedAt");
 
                     b.ToTable("IdentityVerifications");
                 });
@@ -258,6 +266,8 @@ namespace SafeDeal.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedAt");
 
                     b.HasIndex("UserId", "ReadAt");
 
@@ -314,12 +324,16 @@ namespace SafeDeal.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("BuyerId");
+                    b.HasIndex("CreatedAt");
 
                     b.HasIndex("SecureToken")
                         .IsUnique();
 
-                    b.HasIndex("VendorId");
+                    b.HasIndex("Status");
+
+                    b.HasIndex("BuyerId", "CreatedAt");
+
+                    b.HasIndex("VendorId", "CreatedAt");
 
                     b.ToTable("Transactions");
                 });
@@ -412,8 +426,12 @@ namespace SafeDeal.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedAt");
+
                     b.HasIndex("Email")
                         .IsUnique();
+
+                    b.HasIndex("Role");
 
                     b.ToTable("Users");
                 });

@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using SafeDeal.Application.Common.Caching;
 using Microsoft.Extensions.Logging;
 using SafeDeal.Application.Common.Interfaces;
 using SafeDeal.Domain.Enums;
@@ -17,17 +18,20 @@ public class SyncVerificationCommandHandler : IRequestHandler<SyncVerificationCo
     private readonly IApplicationDbContext _context;
     private readonly IIdentityVerificationRepository _verifications;
     private readonly IUserRepository _users;
+    private readonly ICacheService _cache;
     private readonly ILogger<SyncVerificationCommandHandler> _logger;
 
     public SyncVerificationCommandHandler(
         IApplicationDbContext context,
         IIdentityVerificationRepository verifications,
         IUserRepository users,
+        ICacheService cache,
         ILogger<SyncVerificationCommandHandler> logger)
     {
         _context = context;
         _verifications = verifications;
         _users = users;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -71,6 +75,10 @@ public class SyncVerificationCommandHandler : IRequestHandler<SyncVerificationCo
 
         await _verifications.UpdateAsync(verification, ct);
         await _users.UpdateAsync(user, ct);
+
+        // Meme effet qu'une decision prise a la main dans l'ecran admin.
+        await _cache.InvalidateAsync(CacheScopes.User(verification.UserId), ct);
+        await _cache.InvalidateAsync(CacheScopes.Admin, ct);
 
         _logger.LogInformation(
             "Sumsub decision {Answer} applied to user {UserId}.", request.Answer, verification.UserId);

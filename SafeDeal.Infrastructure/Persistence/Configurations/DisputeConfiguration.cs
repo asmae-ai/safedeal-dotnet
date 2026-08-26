@@ -32,5 +32,9 @@ public class DisputeConfiguration : IEntityTypeConfiguration<Dispute>
             .WithOne(t => t.Dispute)
             .HasForeignKey<Dispute>(d => d.TransactionId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // La file d'administration filtre par statut et trie par date.
+        builder.HasIndex(d => new { d.Status, d.CreatedAt });
+        builder.HasIndex(d => d.CreatedAt);
     }
 }
