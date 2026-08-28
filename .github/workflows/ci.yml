@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# Une seule execution par branche : un push qui suit de peu le precedent annule
+# la CI devenue caduque plutot que de faire la queue derriere elle.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+
+jobs:
+  build-and-test:
+    name: Build et tests
+    runs-on: ubuntu-latest
+    # Les tests d'integration demarrent de vrais conteneurs : la marge couvre le
+    # telechargement des images sur un cache froid.
+    timeout-minutes: 25
+
+    steps:
+      - name: Recuperer le depot
+        uses: actions/checkout@v4
+
+      - name: Installer le SDK .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # Le depot ne versionne pas de packages.lock.json : la cle du cache derive
+      # donc des .csproj, qui portent les versions de paquets.
+      - name: Restaurer le cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restaurer les dependances
+        run: dotnet restore SafeDeal.sln
+
+      - name: Compiler la solution
+        run: dotnet build SafeDeal.sln --configuration Release --no-restore
+
+      # --- Tests unitaires : rapides, sans dependance externe. Ils passent en
+      #     premier pour qu'une regression de domaine echoue en quelques secondes
+      #     plutot qu'apres le demarrage des conteneurs.
+      - name: Tests unitaires
+        run: >
+          dotnet test SafeDeal.Tests.Unit/SafeDeal.Tests.Unit.csproj
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=unit.trx"
+          --results-directory ${{ github.workspace }}/test-results
+
+      # --- Tests d'integration : PostgreSQL et Redis via Docker.
+      #
+      # Ils ne sont pas declares en `services:` a dessein. SafeDealFactory monte
+      # ses propres conteneurs avec Testcontainers, jetables et isoles par
+      # execution : des services declares ici resteraient inutilises, et leurs
+      # ports fixes entreraient en conflit d'un job a l'autre. Le runner
+      # ubuntu-latest fournit deja le demon Docker dont Testcontainers a besoin.
+      #
+      # Les images sont tirees explicitement pour que l'echec d'un acces au
+      # registre se lise dans son propre pas, et non noye dans un timeout de test.
+      - name: Preparer les images PostgreSQL et Redis
+        run: |
+          docker pull postgres:16-alpine
+          docker pull redis:7-alpine
+
+      - name: Tests d'integration
+        run: >
+          dotnet test SafeDeal.Tests.Integration/SafeDeal.Tests.Integration.csproj
+          --configuration Release
+          --no-build
+          --logger "trx;LogFileName=integration.trx"
+          --results-directory ${{ github.workspace }}/test-results
+
+      # Publie meme quand la suite echoue : c'est precisement la qu'on a besoin
+      # de relire le detail des tests rouges.
+      - name: Publier les resultats de tests
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ${{ github.workspace }}/test-results
+          if-no-files-found: ignore
+          retention-days: 14
