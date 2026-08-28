@@ -1,4 +1,4 @@
-using MediatR;
+﻿using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SafeDeal.Application.Dashboard.Queries.GetAdminDashboard;
@@ -55,11 +55,19 @@ public class DashboardController : ControllerBase
     /// dernieres transactions.
     /// </remarks>
     /// <param name="range">Granularite de la courbe de volume : `7d` (defaut), `30d` ou `12m`.</param>
+    /// <param name="period">
+    /// Synonyme de <paramref name="range"/>. Accepte parce que les appelants
+    /// l'employaient deja : le parametre etait ignore en silence, et une demande
+    /// de `30d` repartait avec sept jours de donnees.
+    /// </param>
     [HttpGet("admin")]
     [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> Admin([FromQuery] string range = "7d", CancellationToken ct = default)
+    public async Task<IActionResult> Admin(
+        [FromQuery] string? range = null,
+        [FromQuery] string? period = null,
+        CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetAdminDashboardQuery(range), ct);
+        var result = await _mediator.Send(new GetAdminDashboardQuery(range ?? period ?? "7d"), ct);
         return Ok(new { data = result });
     }
 }

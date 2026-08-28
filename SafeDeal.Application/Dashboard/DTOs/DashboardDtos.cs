@@ -1,4 +1,4 @@
-namespace SafeDeal.Application.Dashboard.DTOs;
+﻿namespace SafeDeal.Application.Dashboard.DTOs;
 
 /// <summary>Un point d'une série temporelle (mois, jour ou heure selon la requête).</summary>
 public record SeriesPointDto(string Label, string Value, int Count);
@@ -96,4 +96,29 @@ public record AdminDashboardDto(
     IEnumerable<SeriesPointDto> RevenueToday,
     IEnumerable<ActivityItemDto> Activity,
     IEnumerable<AdminLatestTransactionDto> LatestTransactions,
-    IEnumerable<AdminNewUserDto> NewUsers);
+    IEnumerable<AdminNewUserDto> NewUsers)
+{
+    // Noms attendus par le tableau de bord d'administration. Les champs d'origine
+    // restent exposés : un renommage aurait cassé les consommateurs déjà en place,
+    // alors qu'un alias calculé ne coûte qu'une propriété en lecture seule.
+
+    /// <summary>Alias de <see cref="TransactionsToday"/>.</summary>
+    public int TodayTransactions => TransactionsToday;
+
+    /// <summary>Alias de <see cref="EscrowAmount"/> : fonds encore bloqués en séquestre.</summary>
+    public string TotalEscrowAmount => EscrowAmount;
+
+    /// <summary>
+    /// Alias de <see cref="SettledVolume"/> : le volume des transactions menées à
+    /// leur terme, seul montant réellement encaissé par la plateforme. Distinct de
+    /// <see cref="TotalVolume"/>, qui compte aussi les transactions en cours,
+    /// annulées ou remboursées.
+    /// </summary>
+    public string TotalRevenue => SettledVolume;
+
+    /// <summary>Alias de <see cref="Commission"/>.</summary>
+    public string TotalCommission => Commission;
+
+    /// <summary>Alias de <see cref="VolumeSeries"/>.</summary>
+    public IEnumerable<SeriesPointDto> SalesSeries => VolumeSeries;
+}
